@@ -1,41 +1,59 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 process.env.TF_CPP_MIN_LOG_LEVEL ??= "2";
 
+/**
+ * Appends system rows onto the committed pendulum results.
+ * The pendulum table is left as the Step C run. Pass FULL_EXPERIMENTS=1 to
+ * regenerate that table too — it takes a few minutes and replaces the numbers.
+ */
 async function main(): Promise<void> {
-  try {
-    await import("@tensorflow/tfjs-node");
-  } catch (error) {
-    console.warn("tfjs-node unavailable, using the cpu backend.");
-    console.warn(error);
-    const tf = await import("@tensorflow/tfjs");
-    await tf.setBackend("cpu");
-    await tf.ready();
+  await import("@tensorflow/tfjs-node");
+  const { formatResultsMarkdown, runAllExperiments } = await import("../src/ml/experiments");
+  const { formatMetric } = await import("../src/ml/results");
+  const { runSpringExperiment } = await import("../src/ml/spring");
+  const started = Date.now();
+
+  const raw = JSON.parse(await readFile("public/results.json", "utf8")) as {
+    rows: { id: string }[];
+    takeaway: string;
+    generatedAt: string;
+  };
+
+  if (process.env.FULL_EXPERIMENTS === "1") {
+    const results = await runAllExperiments();
+    await writeFile("public/results.json", `${JSON.stringify(results, null, 2)}\n`);
+    await writeFile("RESULTS.md", formatResultsMarkdown(results));
+    console.log(results.takeaway);
+    return;
   }
 
-  const { HEADLESS_STEPS } = await import("../src/ml/constants");
-  const { runAllExperiments, formatResultsMarkdown } = await import("../src/ml/experiments");
-  const started = Date.now();
-  console.log(`headless budget ${HEADLESS_STEPS} steps, cosine 1e-3 → 1e-4, seeds 2026 / 7 / 42`);
-  const results = await runAllExperiments({
-    steps: HEADLESS_STEPS,
-    onProgress: (progress) => {
-      if (progress.step === 1 || progress.step % 250 === 0 || progress.step === progress.steps) {
-        const name = progress.model === "nn" ? "nn  " : "pinn";
-        console.log(
-          `${name} ${String(progress.step).padStart(4)}/${progress.steps}  data ${progress.dataLoss.toExponential(3)}`,
-        );
-      }
-    },
+  console.log("spring-mass headless row, 5% data, leaving pendulum numbers untouched");
+  const extra = await runSpringExperiment();
+  const ids = new Set(extra.map((row) => row.id));
+  const rows = [...raw.rows.filter((row) => !ids.has(row.id)), ...extra];
+  const order = ["E1", "E2-5", "E2-10", "E3", "E4-1", "E4-3", "E4-10", "ES-2", "ES-10", "EP-2", "EO-2"];
+  rows.sort((a, b) => {
+    const ia = order.indexOf(a.id);
+    const ib = order.indexOf(b.id);
+    return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
   });
-  await mkdir("public", { recursive: true });
+  const sentence = extra
+    .map(
+      (row) =>
+        `${row.name} at ${row.horizonSeconds}s (5% data): NN MSE ${formatMetric(row.nn.mse)}, PINN MSE ${formatMetric(row.pinn.mse)}, winner ${row.winner}`,
+    )
+    .join("; ");
+  const base = raw.takeaway.split(" Separate fits,")[0];
+  const takeaway = `${base} Separate fits, not part of the pendulum seed sweep: ${sentence}. Pendulum numbers above are unchanged from the previous run.`;
+  const results = { ...raw, rows, takeaway, generatedAt: new Date().toISOString() };
   await writeFile("public/results.json", `${JSON.stringify(results, null, 2)}\n`);
-  await writeFile("RESULTS.md", formatResultsMarkdown(results));
-  console.log(`\n${results.takeaway}\n`);
-  console.log(`backend ${results.backend} · ${(Date.now() - started) / 1000}s`);
-  for (const row of results.rows) {
+  await writeFile("RESULTS.md", formatResultsMarkdown(results as never));
+  console.log(`\n${takeaway}\n`);
+  console.log(`appended in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  for (const row of extra) {
     console.log(
-      `${row.id.padEnd(6)} ${row.winner.padEnd(4)}  nn ${row.nn.mse.toExponential(3)}  pinn ${row.pinn.mse.toExponential(3)}  drift ${row.nn.energyDrift.toExponential(2)} / ${row.pinn.energyDrift.toExponential(2)}`,
+      `${row.id.padEnd(6)} ${row.winner.padEnd(4)}  nn ${row.nn.mse.toExponential(3)}  pinn ${row.pinn.mse.toExponential(3)}`,
     );
   }
 }

@@ -1,0 +1,13 @@
+{
+  "system": "double-pendulum",
+  "steps": 1300,
+  "seed": 2026,
+  "lambda": 0.4,
+  "fraction": 1,
+  "dt": 0.02,
+  "hidden": [
+    64,
+    64,
+    64
+  ]
+}

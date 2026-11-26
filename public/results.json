@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T17:35:25.586Z",
+  "generatedAt": "2026-11-26T18:36:17.750Z",
   "backend": "tensorflow",
   "seed": 2026,
   "dt": 0.02,
@@ -178,6 +178,52 @@
         "msPerStep": 0.3414289249999456
       },
       "winner": "pinn"
+    },
+    {
+      "id": "ES-2",
+      "experiment": "ES",
+      "name": "Spring-mass",
+      "setting": "undamped, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 2,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 0.03736717786667029,
+        "mae": 0.1382216338260332,
+        "energyDrift": 0.6769021177129168,
+        "msPerStep": 0.2893709325000009
+      },
+      "pinn": {
+        "mse": 0.010785470255459761,
+        "mae": 0.06930403734731953,
+        "energyDrift": 0.20598858218392752,
+        "msPerStep": 0.28487439749999904
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "ES-10",
+      "experiment": "ES",
+      "name": "Spring-mass",
+      "setting": "undamped, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 10,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 0.5615474049491654,
+        "mae": 0.5380337488899859,
+        "energyDrift": 3.6864210190776516,
+        "msPerStep": 0.26846502800000005
+      },
+      "pinn": {
+        "mse": 0.3354660930212224,
+        "mae": 0.3827788913504664,
+        "energyDrift": 1.5883225592344072,
+        "msPerStep": 0.2607725015000003
+      },
+      "winner": "pinn"
     }
   ],
   "seeds": [
@@ -216,5 +262,5 @@
       "pinnDriftStd": 0.6902795311504129
     }
   ],
-  "takeaway": "On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839)."
+  "takeaway": "On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839). Separate fits, not part of the pendulum seed sweep: Spring-mass at 2s (5% data): NN MSE 0.037, PINN MSE 0.011, winner pinn; Spring-mass at 10s (5% data): NN MSE 0.562, PINN MSE 0.335, winner pinn. Pendulum numbers above are unchanged from the previous run."
 }

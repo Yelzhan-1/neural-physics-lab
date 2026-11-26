@@ -8,6 +8,18 @@ export {
   type NormalMode,
 } from "./doublePendulum";
 export {
+  DEFAULT_SPRING,
+  simulateSpring,
+  springAcceleration,
+  springAnalytic,
+  springDerivatives,
+  springEnergy,
+  springRk4,
+  SPRING_STATE,
+  type SpringParams,
+  type SpringState,
+} from "./springMass";
+export {
   createKinematics,
   DEFAULT_DT,
   DEFAULT_PARAMS,

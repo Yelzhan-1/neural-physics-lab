@@ -104,8 +104,12 @@ export function ExperimentCenter() {
           };
           const ids = new Set(rows.map((row) => row.id));
           const merged = [...base.rows.filter((row) => !ids.has(row.id)), ...rows];
-          const order = ["E1", "E2-5", "E2-10", "E3", "E4-1", "E4-3", "E4-10"];
-          merged.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+          const order = ["E1", "E2-5", "E2-10", "E3", "E4-1", "E4-3", "E4-10", "ES-2", "ES-10", "EP-2", "EO-2"];
+          merged.sort((a, b) => {
+            const ia = order.indexOf(a.id);
+            const ib = order.indexOf(b.id);
+            return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
+          });
           return {
             ...base,
             rows: merged,

@@ -2,6 +2,8 @@ import type { PendulumParams } from "../engine";
 import type { ExperimentId, InMessage, OutMessage } from "./messages";
 import type { ResultRow } from "./results";
 import type { TrainSummary } from "./session";
+import type { SpringParams } from "../engine";
+import type { SpringTrainResult } from "./spring";
 import type { TrainProgress } from "./train";
 
 interface Pending {
@@ -54,13 +56,58 @@ export class MlClient {
   }
 
   train(
-    args: { fraction: number; lambda: number; params: PendulumParams; seed: number },
+    args: {
+      fraction: number;
+      lambda: number;
+      params: PendulumParams;
+      seed: number;
+      steps?: number;
+      calibrate?: boolean;
+      targetMs?: number;
+    },
     onProgress?: (progress: TrainProgress) => void,
   ): Promise<TrainSummary> {
     const id = this.nextId++;
     return this.send({ id, type: "train", ...args }, onProgress).then((message) => {
       if (message.type !== "trained") throw new Error("Unexpected worker response");
       return message.summary;
+    });
+  }
+
+  trainSpring(
+    args: { fraction: number; lambda: number; params: SpringParams; seed: number; steps?: number },
+    onProgress?: (progress: TrainProgress) => void,
+  ): Promise<SpringTrainResult> {
+    const id = this.nextId++;
+    return this.send({ id, type: "train-spring", ...args }, onProgress).then((message) => {
+      if (message.type !== "spring-trained") throw new Error("Unexpected worker response");
+      return message.summary;
+    });
+  }
+
+  loadSpring(): Promise<void> {
+    const id = this.nextId++;
+    return this.send({ id, type: "load-spring" }).then((message) => {
+      if (message.type !== "pretrained") throw new Error("Unexpected worker response");
+    });
+  }
+
+  rolloutSpring(
+    initial: number[],
+    seconds: number,
+    params: SpringParams,
+  ): Promise<{ nn: Float32Array; pinn: Float32Array; dt: number }> {
+    const id = this.nextId++;
+    return this.send({ id, type: "rollout-spring", initial, seconds, params }).then((message) => {
+      if (message.type !== "rollout") throw new Error("Unexpected worker response");
+      return { nn: new Float32Array(message.nn), pinn: new Float32Array(message.pinn), dt: message.dt };
+    });
+  }
+
+  loadPretrained(system = "double-pendulum"): Promise<void> {
+    const id = this.nextId++;
+    return this.send({ id, type: "load-pretrained", system }).then((message) => {
+      if (message.type !== "pretrained") throw new Error("Unexpected worker response");
     });
   }
 

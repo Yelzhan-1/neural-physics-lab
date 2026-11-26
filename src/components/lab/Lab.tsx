@@ -2,8 +2,10 @@
 
 import { motion } from "motion/react";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DEFAULT_PARAMS, type PendulumParams } from "@/engine";
+import { divergenceTime } from "@/components/scene/divergence";
 import { PendulumScene, type SceneLayout } from "@/components/scene/PendulumScene";
 import type { SceneView } from "@/components/scene/draw";
 import { useLabRuntime } from "@/components/scene/useLabRuntime";
@@ -12,11 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { SystemSelector } from "@/components/systems/SystemSelector";
-import { ControlPanel, ParamSlider } from "./ControlPanel";
+import { SpringLab } from "@/components/spring/SpringLab";
+import { ControlPanel } from "./ControlPanel";
 import { ModelPanel } from "./ModelPanel";
 import { PhysicsPanel } from "./PhysicsPanel";
+import { ChallengePanel } from "./ChallengePanel";
 import { TrainPanel } from "./TrainPanel";
-import { useLabModels } from "./useLabModels";
+import { DEMO_POSE, useLabModels } from "./useLabModels";
+import { DEMO_THETA1, DEMO_THETA2, ROLLOUT_SECONDS } from "@/ml/constants";
 
 const DEFAULT_THETA1 = 120;
 const DEFAULT_THETA2 = -20;
@@ -33,15 +38,26 @@ const entrance = {
   animate: { opacity: 1, y: 0, filter: "blur(0px)" },
 };
 
-export function Lab() {
+function sameParams(a: PendulumParams, b: PendulumParams): boolean {
+  return a.m1 === b.m1 && a.m2 === b.m2 && a.l1 === b.l1 && a.l2 === b.l2 && a.g === b.g && a.damping === b.damping;
+}
+
+export function Lab({ demo = false, system = "pendulum" }: { demo?: boolean; system?: string }) {
+  if (system === "spring") return <SpringLab />;
+  return <PendulumLab demo={demo} />;
+}
+
+function PendulumLab({ demo = false }: { demo?: boolean }) {
+  const router = useRouter();
   const runtime = useLabRuntime();
   const [params, setParams] = useState<PendulumParams>({ ...DEFAULT_PARAMS });
   const [theta1, setTheta1] = useState(DEFAULT_THETA1);
   const [theta2, setTheta2] = useState(DEFAULT_THETA2);
   const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(demo ? 2 : 1);
   const [view, setView] = useState<SceneView>("pendulum");
-  const [layout, setLayout] = useState<SceneLayout>("split");
+  const [layout, setLayout] = useState<SceneLayout>(demo ? "overlay" : "split");
+  const onLiveReady = useRef<() => void>(() => {});
 
   useEffect(() => runtime.setParams(params), [runtime, params]);
   useEffect(
@@ -50,7 +66,84 @@ export function Lab() {
   );
   useEffect(() => runtime.setPlaying(playing), [runtime, playing]);
   useEffect(() => runtime.setSpeed(speed), [runtime, speed]);
-  const models = useLabModels(runtime, { theta1, theta2, params });
+  useEffect(() => {
+    onLiveReady.current = () => {
+      setSpeed(2);
+      setLayout("overlay");
+      setPlaying(true);
+    };
+  }, []);
+  const models = useLabModels(runtime, { theta1, theta2, params }, demo, onLiveReady);
+  const pendingRestore = useRef(false);
+  const timeRef = useRef<HTMLSpanElement>(null);
+  const rangeRef = useRef<HTMLInputElement>(null);
+  const scrubbing = useRef(false);
+
+  const restorePretrained = useCallback(() => {
+    const already =
+      theta1 === DEMO_THETA1 && theta2 === DEMO_THETA2 && sameParams(params, DEFAULT_PARAMS);
+    pendingRestore.current = !already;
+    setParams({ ...DEFAULT_PARAMS });
+    setTheta1(DEMO_THETA1);
+    setTheta2(DEMO_THETA2);
+    setPlaying(true);
+    if (already) models.usePretrained();
+  }, [models, params, theta1, theta2]);
+
+  useEffect(() => {
+    if (!pendingRestore.current) return;
+    if (theta1 !== DEMO_THETA1 || theta2 !== DEMO_THETA2 || !sameParams(params, DEFAULT_PARAMS)) return;
+    pendingRestore.current = false;
+    models.usePretrained();
+  }, [models, params, theta1, theta2]);
+
+  const enterDemo = () => {
+    setSpeed(2);
+    setLayout("overlay");
+    setPlaying(true);
+    const already =
+      theta1 === DEMO_POSE.theta1 && theta2 === DEMO_POSE.theta2 && sameParams(params, DEFAULT_PARAMS);
+    if (!already) {
+      pendingRestore.current = true;
+      setParams({ ...DEFAULT_PARAMS });
+      setTheta1(DEMO_POSE.theta1);
+      setTheta2(DEMO_POSE.theta2);
+    } else {
+      const trajectory = runtime.trajectories[1];
+      if (trajectory) {
+        runtime.seek(divergenceTime(trajectory.states, trajectory.dt, runtime.params, runtime.initial));
+      }
+    }
+    router.push("/lab?demo=1");
+  };
+
+  const leaveDemo = () => {
+    setSpeed(1);
+    setLayout("split");
+    router.push("/lab");
+  };
+
+  useEffect(() => {
+    return runtime.onFrame(() => {
+      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
+      if (rangeRef.current && !scrubbing.current) rangeRef.current.value = String(runtime.time);
+    });
+  }, [runtime]);
+
+  const jumpTo = (seconds: number) => {
+    runtime.seek(seconds);
+    if (rangeRef.current) rangeRef.current.value = String(seconds);
+    setPlaying(true);
+  };
+
+  const jumpDivergence = () => {
+    const trajectory = runtime.trajectories[1];
+    if (!trajectory) return;
+    const time = divergenceTime(trajectory.states, trajectory.dt, runtime.params, runtime.initial);
+    jumpTo(time);
+    setSpeed(2);
+    setLayout("overlay");
+  };
 
   const setAngles = useCallback((next1: number, next2: number) => {
     setTheta1(next1);
@@ -64,7 +157,7 @@ export function Lab() {
   return (
     <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
-        <SystemSelector className="mb-4" />
+        <SystemSelector active="double-pendulum" className="mb-4" />
         <motion.div {...entrance} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
           <SpotlightCard className="overflow-hidden">
             <div className="h-[480px] sm:h-[clamp(360px,46vh,560px)]">
@@ -100,19 +193,66 @@ export function Lab() {
                 </Button>
               </div>
 
-              <div className="w-40 min-w-32 flex-1 sm:max-w-52">
-                <ParamSlider
-                  symbol="×"
-                  name="Speed"
-                  unit="×"
-                  value={speed}
-                  min={0.1}
-                  max={3}
-                  step={0.1}
-                  digits={1}
-                  onChange={setSpeed}
-                />
+              <div
+                role="group"
+                aria-label="Playback speed"
+                className="flex rounded-lg bg-white/[0.05] p-0.5 text-xs ring-1 ring-white/[0.07]"
+              >
+                {[1, 2, 4].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={speed === value}
+                    onClick={() => setSpeed(value)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1.5 font-num font-medium",
+                      speed === value ? "bg-white/10 text-white" : "text-white/55 hover:text-white",
+                    )}
+                  >
+                    {value}×
+                  </button>
+                ))}
               </div>
+
+              <div className="flex min-w-[180px] flex-1 items-center gap-2">
+                <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-num w-14 shrink-0 text-white/80">
+                    t <span ref={timeRef}>0.00</span>s
+                  </span>
+                  <input
+                    ref={rangeRef}
+                    type="range"
+                    min={0}
+                    max={ROLLOUT_SECONDS}
+                    step={0.05}
+                    defaultValue={0}
+                    aria-label="Timeline"
+                    className="h-1 w-full accent-cyan-300"
+                    onPointerDown={() => {
+                      scrubbing.current = true;
+                    }}
+                    onPointerUp={() => {
+                      scrubbing.current = false;
+                    }}
+                    onChange={(event) => runtime.seek(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+
+              <Button size="sm" variant="outline" onClick={() => jumpTo(3)}>
+                Jump to t = 3 s
+              </Button>
+              <Button size="sm" variant="outline" onClick={jumpDivergence}>
+                Jump to divergence
+              </Button>
+              <Button
+                size="sm"
+                variant={demo ? "default" : "outline"}
+                aria-pressed={demo}
+                onClick={() => (demo ? leaveDemo() : enterDemo())}
+              >
+                Demo mode
+              </Button>
 
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 sm:ml-auto">
                 <label className="flex cursor-pointer items-center gap-2.5 text-xs text-muted-foreground transition-colors hover:text-white">
@@ -165,7 +305,7 @@ export function Lab() {
         transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
         className="order-3 min-w-0 lg:col-start-1"
       >
-        <ModelPanel runtime={runtime} />
+        <ModelPanel runtime={runtime} slotsReady={models.slotsReady} />
       </motion.div>
 
       <motion.div
@@ -178,7 +318,15 @@ export function Lab() {
 
       <div className="order-2 grid content-start gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:max-h-[calc(100svh-2rem)] lg:self-start lg:overflow-y-auto">
         <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}>
-          <TrainPanel models={models} />
+          <TrainPanel models={models} onUsePretrained={restorePretrained} />
+          <ChallengePanel
+            models={models}
+            runtime={runtime}
+            params={params}
+            setPlaying={setPlaying}
+            setSpeed={setSpeed}
+            setAngles={setAngles}
+          />
         </motion.div>
         <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}>
           <ControlPanel

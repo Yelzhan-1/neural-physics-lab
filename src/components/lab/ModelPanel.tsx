@@ -23,7 +23,7 @@ function tipError(runtime: LabRuntime, slot: number): number {
 }
 
 /** Tip error and total energy of physics, the standard NN and the PINN. */
-export function ModelPanel({ runtime }: { runtime: LabRuntime }) {
+export function ModelPanel({ runtime, slotsReady = false }: { runtime: LabRuntime; slotsReady?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -157,7 +157,12 @@ export function ModelPanel({ runtime }: { runtime: LabRuntime }) {
         </header>
         <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2].map((slot) => (
-            <div key={slot} className="rounded-lg bg-white/[0.035] px-3 py-2.5">
+            <div
+              key={slot}
+              data-testid={slot === 1 ? "slot-nn" : "slot-pinn"}
+              data-active={slotsReady ? "true" : "false"}
+              className="rounded-lg bg-white/[0.035] px-3 py-2.5"
+            >
               <p className="flex items-center gap-2 text-xs text-white/80">
                 <span className="size-1.5 rounded-full" style={{ background: COLORS[slot] }} />
                 {NAMES[slot]}

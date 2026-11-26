@@ -5,8 +5,10 @@ import { runExperiment } from "./experiments";
 import { CancelledError } from "./train";
 import type { InMessage, OutMessage } from "./messages";
 import { LabSession } from "./session";
+import { SpringSession } from "./spring";
 
 const lab = new LabSession();
+const spring = new SpringSession();
 let generation = 0;
 
 function post(message: OutMessage, transfer?: Transferable[]): void {
@@ -34,6 +36,12 @@ async function handle(message: InMessage): Promise<void> {
       post({ id: message.id, type: "cleared" });
       return;
     }
+    if (message.type === "load-pretrained") {
+      await lab.loadPretrained(message.system, self.location.origin);
+      if (stopped()) return;
+      post({ id: message.id, type: "pretrained" });
+      return;
+    }
     if (message.type === "train") {
       const summary = await lab.train(
         {
@@ -41,6 +49,9 @@ async function handle(message: InMessage): Promise<void> {
           lambda: message.lambda,
           params: message.params,
           seed: message.seed,
+          steps: message.steps,
+          calibrate: message.calibrate,
+          targetMs: message.targetMs,
         },
         (progress) => {
           if (!stopped()) post({ id: message.id, type: "progress", progress });
@@ -51,6 +62,38 @@ async function handle(message: InMessage): Promise<void> {
       post({ id: message.id, type: "trained", summary });
       return;
     }
+    if (message.type === "load-spring") {
+      await spring.loadPretrained(self.location.origin);
+      if (stopped()) return;
+      post({ id: message.id, type: "pretrained" });
+      return;
+    }
+    if (message.type === "train-spring") {
+      const summary = await spring.train(
+        {
+          fraction: message.fraction,
+          lambda: message.lambda,
+          params: message.params,
+          seed: message.seed,
+          steps: message.steps,
+        },
+        (progress) => {
+          if (!stopped()) post({ id: message.id, type: "progress", progress });
+        },
+        stopped,
+      );
+      if (stopped()) return;
+      post({ id: message.id, type: "spring-trained", summary });
+      return;
+    }
+    if (message.type === "rollout-spring") {
+      if (stopped()) return;
+      const result = spring.rollout(message.initial, message.seconds, message.params);
+      const nn = result.nn.buffer as ArrayBuffer;
+      const pinn = result.pinn.buffer as ArrayBuffer;
+      post({ id: message.id, type: "rollout", nn, pinn, dt: result.dt }, [nn, pinn]);
+      return;
+    }
     if (message.type === "rollout") {
       if (stopped()) return;
       const result = lab.rollout(message.initial, message.seconds);
@@ -58,6 +101,9 @@ async function handle(message: InMessage): Promise<void> {
       const pinn = result.pinn.buffer as ArrayBuffer;
       post({ id: message.id, type: "rollout", nn, pinn, dt: result.dt }, [nn, pinn]);
       return;
+    }
+    if (message.type !== "experiment") {
+      throw new Error(`Unknown worker message`);
     }
     const rows = await runExperiment(message.experiment, {
       onProgress: (progress) => {
