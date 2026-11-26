@@ -47,6 +47,14 @@ test("lab training starts in a worker while the simulation clock keeps moving", 
   expect(errors).toEqual([]);
 });
 
+test("qr page shows a code for the live site", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/qr");
+  await expect(page.getByRole("img", { name: /QR code for/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "neural-physics-lab-roan.vercel.app" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("experiments page shows computed results and can export them", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/experiments");

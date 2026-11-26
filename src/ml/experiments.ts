@@ -1,19 +1,30 @@
 import * as tf from "@tensorflow/tfjs";
 import { DEFAULT_PARAMS, type PendulumParams } from "../engine";
 import {
+  BATCH_SIZE,
   DEFAULT_LAMBDA,
   EXPERIMENT_STEPS,
   HIDDEN_UNITS,
   LEARNING_RATE,
+  LEARNING_RATE_END,
   MODEL_DT,
   SEED,
-  BATCH_SIZE,
+  SWEEP_SEEDS,
 } from "./constants";
 import { generateDataset, testInitial, testSlice, type Dataset, type DatasetConfig } from "./dataset";
 import { timeReference } from "./integrate";
 import { averageMetrics, trajectoryError, type ModelMetrics } from "./metrics";
 import { rolloutModel, timeModel } from "./predict";
-import { takeaway, winnerOf, type ResultRow, type ResultsFile } from "./results";
+import {
+  DRIFT_NOTE,
+  MSE_NOTE,
+  seedSummary,
+  takeaway,
+  winnerOf,
+  type ResultRow,
+  type ResultsFile,
+  type SeedSummary,
+} from "./results";
 import { CancelledError, createModel, trainModel, type TrainProgress } from "./train";
 import type { ExperimentId } from "./messages";
 
@@ -221,28 +232,56 @@ export async function runExperiment(id: ExperimentId, hooks: ExperimentHooks = {
   return runStandard(hooks, [1, 3, 10], ["E4-1", "E4-3", "E4-10"]);
 }
 
-/** All four experiments. E4 reuses the E1 networks instead of training them twice. */
+const E1_META = {
+  id: "E1",
+  experiment: "E1" as const,
+  name: "Standard conditions",
+  setting: "100% of the data, held-out trajectories",
+};
+
+const E2_META = (percent: number) => ({
+  id: `E2-${percent}`,
+  experiment: "E2" as const,
+  name: "Limited training data",
+  setting: `${percent}% of the data, same held-out trajectories`,
+});
+
+async function scoreFraction(hooks: ExperimentHooks, fraction: number, lambda: number): Promise<ResultRow> {
+  const percent = Math.round(fraction * 100);
+  const fitted = await fit(standardConfig(hooks, fraction), hooks, lambda);
+  try {
+    return makeRow(fitted, percent === 100 ? E1_META : E2_META(percent), 2);
+  } finally {
+    disposeFitted(fitted);
+  }
+}
+
+function orderedSweep(found: { seed: number; row: ResultRow }[]): { seeds: number[]; rows: ResultRow[] } {
+  const seeds: number[] = [];
+  const rows: ResultRow[] = [];
+  for (const seed of SWEEP_SEEDS) {
+    const match = found.find((item) => item.seed === seed);
+    if (!match) continue;
+    seeds.push(seed);
+    rows.push(match.row);
+  }
+  return { seeds, rows };
+}
+
+/** All four experiments. E4 reuses the E1 networks. E1 and E2 at 5% are repeated on SWEEP_SEEDS. */
 export async function runAllExperiments(hooks: ExperimentHooks = {}): Promise<ResultsFile> {
   const params = hooks.params ?? { ...DEFAULT_PARAMS };
   const lambda = hooks.lambda ?? DEFAULT_LAMBDA;
   const seed = hooks.seed ?? SEED;
   const fitted = await fit(standardConfig(hooks, 1), hooks, lambda);
-  const rows: ResultRow[] = [];
+  const e1Sweep: { seed: number; row: ResultRow }[] = [];
+  const longRows: ResultRow[] = [];
+  let e1: ResultRow;
   try {
-    rows.push(
-      makeRow(
-        fitted,
-        {
-          id: "E1",
-          experiment: "E1",
-          name: "Standard conditions",
-          setting: "100% of the data, held-out trajectories",
-        },
-        2,
-      ),
-    );
+    e1 = makeRow(fitted, E1_META, 2);
+    e1Sweep.push({ seed, row: e1 });
     for (const horizon of [1, 3, 10]) {
-      rows.push(
+      longRows.push(
         makeRow(
           fitted,
           {
@@ -258,14 +297,30 @@ export async function runAllExperiments(hooks: ExperimentHooks = {}): Promise<Re
   } finally {
     disposeFitted(fitted);
   }
-  const limited = await runLimited(hooks);
+
+  const limited: ResultRow[] = [];
+  const e2Sweep: { seed: number; row: ResultRow }[] = [];
+  for (const fraction of [0.05, 0.1]) {
+    const row = await scoreFraction(hooks, fraction, lambda);
+    limited.push(row);
+    if (fraction === 0.05) e2Sweep.push({ seed, row });
+  }
   const unseen = await runUnseen(hooks);
-  const ordered = [
-    ...rows.filter((row) => row.experiment === "E1"),
-    ...limited,
-    ...unseen,
-    ...rows.filter((row) => row.experiment === "E4"),
+
+  for (const extra of SWEEP_SEEDS) {
+    if (extra === seed) continue;
+    const extraHooks = { ...hooks, seed: extra };
+    e1Sweep.push({ seed: extra, row: await scoreFraction(extraHooks, 1, lambda) });
+    e2Sweep.push({ seed: extra, row: await scoreFraction(extraHooks, 0.05, lambda) });
+  }
+
+  const e1Ordered = orderedSweep(e1Sweep);
+  const e2Ordered = orderedSweep(e2Sweep);
+  const seeds: SeedSummary[] = [
+    seedSummary("E1", "Standard conditions", e1Ordered.seeds, e1Ordered.rows),
+    seedSummary("E2-5", "Limited data, 5%", e2Ordered.seeds, e2Ordered.rows),
   ];
+  const ordered = [e1, ...limited, ...unseen, ...longRows];
 
   return {
     version: 1,
@@ -277,10 +332,14 @@ export async function runAllExperiments(hooks: ExperimentHooks = {}): Promise<Re
     optimizerSteps: hooks.steps ?? EXPERIMENT_STEPS,
     batchSize: BATCH_SIZE,
     learningRate: LEARNING_RATE,
+    learningRateEnd: LEARNING_RATE_END,
     lambda,
     rk4MsPerStep: timeReference(params),
+    mseNote: MSE_NOTE,
+    driftNote: DRIFT_NOTE,
     rows: ordered,
-    takeaway: takeaway(ordered),
+    seeds,
+    takeaway: takeaway(ordered, seeds),
   };
 }
 

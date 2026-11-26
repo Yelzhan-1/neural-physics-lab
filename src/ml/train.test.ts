@@ -2,7 +2,7 @@ import * as tf from "@tensorflow/tfjs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_PARAMS } from "../engine";
 import { generateDataset } from "./dataset";
-import { createModel, trainModel } from "./train";
+import { cosineLearningRate, createModel, trainModel } from "./train";
 
 beforeAll(async () => {
   await tf.setBackend("cpu");
@@ -10,6 +10,14 @@ beforeAll(async () => {
 });
 
 describe("training setup", () => {
+  it("decays the learning rate from the start value to the end value", () => {
+    expect(cosineLearningRate(0, 100, 1e-3, 1e-4)).toBeCloseTo(1e-3, 8);
+    expect(cosineLearningRate(99, 100, 1e-3, 1e-4)).toBeCloseTo(1e-4, 8);
+    const mid = cosineLearningRate(50, 101, 1e-3, 1e-4);
+    expect(mid).toBeGreaterThan(1e-4);
+    expect(mid).toBeLessThan(1e-3);
+  });
+
   it("starts both models from the same weights when the seed matches", () => {
     const first = createModel(11);
     const second = createModel(11);

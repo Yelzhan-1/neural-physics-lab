@@ -225,7 +225,60 @@ function drawJoint(
   ctx.fill();
 }
 
-/** Robot-arm view: mount, two capsule links, joints and a gripper. */
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawGripper(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  theta2: number,
+  size: number,
+  color: string,
+  dashed: boolean,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 2 - theta2);
+  const jaw = 18 * size;
+  const gap = 7.5 * size;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = dashed ? 1.4 * size : 3 * size;
+  if (dashed) ctx.setLineDash(DASH_GHOST);
+  if (!dashed) {
+    roundRect(ctx, -1 * size, -gap - 1.5 * size, 9 * size, gap * 2 + 3 * size, 2 * size);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.moveTo(7 * size, -gap);
+  ctx.lineTo(jaw, -gap);
+  ctx.lineTo(jaw + 4 * size, -gap * 0.28);
+  ctx.moveTo(7 * size, gap);
+  ctx.lineTo(jaw, gap);
+  ctx.lineTo(jaw + 4 * size, gap * 0.28);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Robot-arm view: base mount, two thick links, joints and a gripper. */
 function drawArmBody(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -238,65 +291,46 @@ function drawArmBody(
   glow: CanvasImageSource | null,
 ): void {
   const { pivotX, pivotY, size } = place;
+  const railW = 84 * size;
+  const railH = 11 * size;
+  const railY = pivotY - 38 * size;
 
-  // Ceiling mount above the shoulder joint.
-  const plateY = pivotY - 26 * size;
-  const plateHalf = 30 * size;
-  ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
-  ctx.lineWidth = 2 * size;
-  ctx.beginPath();
-  ctx.moveTo(pivotX - plateHalf, plateY);
-  ctx.lineTo(pivotX + plateHalf, plateY);
-  ctx.moveTo(pivotX - plateHalf * 0.55, plateY);
-  ctx.lineTo(pivotX, pivotY);
-  ctx.lineTo(pivotX + plateHalf * 0.55, plateY);
+  ctx.fillStyle = "rgba(12, 18, 32, 0.96)";
+  ctx.strokeStyle = "rgba(186, 198, 216, 0.55)";
+  ctx.lineWidth = 1.25 * size;
+  roundRect(ctx, pivotX - railW / 2, railY, railW, railH, 3 * size);
+  ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let i = -3; i <= 3; i++) {
-    const x = pivotX + (i * plateHalf) / 3.5;
-    ctx.moveTo(x, plateY);
-    ctx.lineTo(x + 6 * size, plateY - 7 * size);
+  ctx.fillStyle = "rgba(226, 232, 240, 0.7)";
+  for (const dx of [-0.34, -0.14, 0.14, 0.34]) {
+    ctx.beginPath();
+    ctx.arc(pivotX + dx * railW, railY + railH / 2, 1.7 * size, 0, TAU);
+    ctx.fill();
   }
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.85)";
+  ctx.lineCap = "butt";
+  ctx.lineWidth = 9 * size;
+  ctx.beginPath();
+  ctx.moveTo(pivotX, railY + railH);
+  ctx.lineTo(pivotX, pivotY);
   ctx.stroke();
 
-  drawLinkCapsule(ctx, pivotX, pivotY, x1, y1, 13 * size, color);
-  drawLinkCapsule(ctx, x1, y1, x2, y2, 9 * size, color);
+  drawLinkCapsule(ctx, pivotX, pivotY, x1, y1, 18 * size, color);
+  drawLinkCapsule(ctx, x1, y1, x2, y2, 13 * size, color);
 
   if (glow) {
     const previous = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = "lighter";
-    const span = 56 * size;
+    const span = 64 * size;
     ctx.drawImage(glow, x2 - span / 2, y2 - span / 2, span, span);
     ctx.globalCompositeOperation = previous;
   }
 
-  // Gripper, aligned with the forearm. Local +x points away from the elbow.
-  ctx.save();
-  ctx.translate(x2, y2);
-  ctx.rotate(Math.PI / 2 - theta2);
-  const reach = 17 * size;
-  const open = 8 * size;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.6 * size;
-  ctx.beginPath();
-  ctx.moveTo(3 * size, -open);
-  ctx.lineTo(3 * size, open);
-  ctx.moveTo(3 * size, -open);
-  ctx.lineTo(reach, -open);
-  ctx.lineTo(reach, -open * 0.45);
-  ctx.moveTo(3 * size, open);
-  ctx.lineTo(reach, open);
-  ctx.lineTo(reach, open * 0.45);
-  ctx.stroke();
-  ctx.restore();
-
-  drawJoint(ctx, pivotX, pivotY, 9 * size, color);
-  drawJoint(ctx, x1, y1, 7.5 * size, color);
-  drawJoint(ctx, x2, y2, 5 * size, color);
+  drawGripper(ctx, x2, y2, theta2, size, color, false);
+  drawJoint(ctx, pivotX, pivotY, 11 * size, color);
+  drawJoint(ctx, x1, y1, 8.5 * size, color);
+  drawJoint(ctx, x2, y2, 6 * size, color);
 }
 
 /** Draws one pendulum (or arm) for the given angles. */
@@ -350,38 +384,34 @@ export function drawGhost(
   ctx.lineWidth = 1.5 * size;
 
   if (view === "arm") {
-    const plateY = pivotY - 26 * size;
-    const plateHalf = 30 * size;
+    const railW = 84 * size;
+    const railH = 11 * size;
+    const railY = pivotY - 38 * size;
+    ctx.lineWidth = 1.4 * size;
+    roundRect(ctx, pivotX - railW / 2, railY, railW, railH, 3 * size);
+    ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(pivotX - plateHalf, plateY);
-    ctx.lineTo(pivotX + plateHalf, plateY);
+    ctx.moveTo(pivotX, railY + railH);
+    ctx.lineTo(pivotX, pivotY);
+    ctx.stroke();
+    ctx.lineWidth = 7 * size;
+    ctx.beginPath();
     ctx.moveTo(pivotX, pivotY);
     ctx.lineTo(x1, y1);
+    ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+    ctx.lineWidth = 1.5 * size;
     for (const joint of [
-      [pivotX, pivotY, 9 * size],
-      [x1, y1, 7.5 * size],
-      [x2, y2, 5 * size],
+      [pivotX, pivotY, 11 * size],
+      [x1, y1, 8.5 * size],
+      [x2, y2, 6 * size],
     ] as const) {
       ctx.beginPath();
       ctx.arc(joint[0], joint[1], joint[2], 0, TAU);
       ctx.stroke();
     }
-    ctx.save();
-    ctx.translate(x2, y2);
-    ctx.rotate(Math.PI / 2 - theta2);
-    const reach = 17 * size;
-    const open = 8 * size;
-    ctx.beginPath();
-    ctx.moveTo(3 * size, -open);
-    ctx.lineTo(reach, -open);
-    ctx.lineTo(reach, -open * 0.45);
-    ctx.moveTo(3 * size, open);
-    ctx.lineTo(reach, open);
-    ctx.lineTo(reach, open * 0.45);
-    ctx.stroke();
-    ctx.restore();
+    drawGripper(ctx, x2, y2, theta2, size, color, true);
     ctx.restore();
     return;
   }

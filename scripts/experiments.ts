@@ -13,14 +13,17 @@ async function main(): Promise<void> {
     await tf.ready();
   }
 
+  const { HEADLESS_STEPS } = await import("../src/ml/constants");
   const { runAllExperiments, formatResultsMarkdown } = await import("../src/ml/experiments");
   const started = Date.now();
+  console.log(`headless budget ${HEADLESS_STEPS} steps, cosine 1e-3 → 1e-4, seeds 2026 / 7 / 42`);
   const results = await runAllExperiments({
+    steps: HEADLESS_STEPS,
     onProgress: (progress) => {
-      if (progress.step === 1 || progress.step % 40 === 0 || progress.step === progress.steps) {
+      if (progress.step === 1 || progress.step % 250 === 0 || progress.step === progress.steps) {
         const name = progress.model === "nn" ? "nn  " : "pinn";
         console.log(
-          `${name} ${String(progress.step).padStart(3)}/${progress.steps}  data ${progress.dataLoss.toExponential(3)}`,
+          `${name} ${String(progress.step).padStart(4)}/${progress.steps}  data ${progress.dataLoss.toExponential(3)}`,
         );
       }
     },
