@@ -8,6 +8,35 @@ export {
   type NormalMode,
 } from "./doublePendulum";
 export {
+  angularMomentum,
+  circularSpeed,
+  DEFAULT_ORBITAL,
+  orbitalAcceleration,
+  orbitalAnalytic,
+  orbitalDerivatives,
+  orbitalEnergy,
+  orbitalLaunch,
+  orbitalRk4,
+  ORBITAL_STATE,
+  simulateOrbital,
+  type OrbitalParams,
+  type OrbitalState,
+} from "./orbital";
+export {
+  DEFAULT_PROJECTILE,
+  projectileAcceleration,
+  projectileAnalytic,
+  projectileDerivatives,
+  projectileEnergy,
+  projectileLanding,
+  projectileLaunch,
+  projectileRk4,
+  PROJECTILE_STATE,
+  simulateProjectile,
+  type ProjectileParams,
+  type ProjectileState,
+} from "./projectile";
+export {
   DEFAULT_SPRING,
   simulateSpring,
   springAcceleration,

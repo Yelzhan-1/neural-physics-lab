@@ -11,11 +11,19 @@ async function main(): Promise<void> {
   await import("@tensorflow/tfjs-node");
   const { formatResultsMarkdown, runAllExperiments } = await import("../src/ml/experiments");
   const { formatMetric } = await import("../src/ml/results");
-  const { runSpringExperiment } = await import("../src/ml/spring");
+  const { runOrbitalExperiment } = await import("../src/ml/orbital");
+  const { runProjectileExperiment } = await import("../src/ml/projectile");
   const started = Date.now();
 
   const raw = JSON.parse(await readFile("public/results.json", "utf8")) as {
-    rows: { id: string }[];
+    rows: {
+      id: string;
+      name: string;
+      horizonSeconds: number;
+      nn: { mse: number };
+      pinn: { mse: number };
+      winner: string;
+    }[];
     takeaway: string;
     generatedAt: string;
   };
@@ -28,17 +36,18 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("spring-mass headless row, 5% data, leaving pendulum numbers untouched");
-  const extra = await runSpringExperiment();
+  console.log("projectile and orbital headless rows, 5% data, leaving earlier numbers untouched");
+  const extra = [...(await runProjectileExperiment()), ...(await runOrbitalExperiment())];
   const ids = new Set(extra.map((row) => row.id));
   const rows = [...raw.rows.filter((row) => !ids.has(row.id)), ...extra];
-  const order = ["E1", "E2-5", "E2-10", "E3", "E4-1", "E4-3", "E4-10", "ES-2", "ES-10", "EP-2", "EO-2"];
+  const order = ["E1", "E2-5", "E2-10", "E3", "E4-1", "E4-3", "E4-10", "ES-2", "ES-10", "EP-2", "EP-10", "EO-2", "EO-10"];
   rows.sort((a, b) => {
     const ia = order.indexOf(a.id);
     const ib = order.indexOf(b.id);
     return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib);
   });
-  const sentence = extra
+  const sentence = rows
+    .filter((row) => row.id.startsWith("ES") || row.id.startsWith("EP") || row.id.startsWith("EO"))
     .map(
       (row) =>
         `${row.name} at ${row.horizonSeconds}s (5% data): NN MSE ${formatMetric(row.nn.mse)}, PINN MSE ${formatMetric(row.pinn.mse)}, winner ${row.winner}`,

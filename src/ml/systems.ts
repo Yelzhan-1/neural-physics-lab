@@ -1,10 +1,6 @@
 export type SystemStatus = "ready" | "coming-soon";
 
-/**
- * A physical system the lab can train on. Only the double pendulum is
- * implemented; the other cards exist so a new system can be registered here
- * without redesigning the page.
- */
+/** A physical system the lab can train on. */
 export interface PhysicalSystem {
   id: string;
   code: string;
@@ -32,14 +28,14 @@ export const SYSTEMS: readonly PhysicalSystem[] = [
     id: "projectile",
     code: "03",
     name: "Projectile with drag",
-    status: "coming-soon",
+    status: "ready",
     summary: "m a + c |v| v + m g = 0. Quadratic air drag, with a landing marker.",
   },
   {
     id: "orbital",
     code: "04",
     name: "Orbital motion",
-    status: "coming-soon",
+    status: "ready",
     summary: "a = −GM r / |r|³, with energy and angular-momentum penalties.",
   },
 ];

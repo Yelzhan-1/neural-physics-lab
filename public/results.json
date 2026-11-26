@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T18:36:17.750Z",
+  "generatedAt": "2026-11-26T19:05:02.817Z",
   "backend": "tensorflow",
   "seed": 2026,
   "dt": 0.02,
@@ -224,6 +224,98 @@
         "msPerStep": 0.2607725015000003
       },
       "winner": "pinn"
+    },
+    {
+      "id": "EP-2",
+      "experiment": "EP",
+      "name": "Projectile with drag",
+      "setting": "quadratic drag, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 2,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 4.300359856309531,
+        "mae": 1.3137048482435056,
+        "energyDrift": 0.6949777505646932,
+        "msPerStep": 0.21651312000000078
+      },
+      "pinn": {
+        "mse": 1.3114896202575064,
+        "mae": 0.8127122454269555,
+        "energyDrift": 1.4376549171885435,
+        "msPerStep": 0.22297279499999945
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "EP-10",
+      "experiment": "EP",
+      "name": "Projectile with drag",
+      "setting": "quadratic drag, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 10,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 645.5332125178209,
+        "mae": 18.609537080584488,
+        "energyDrift": 7.648331512201845,
+        "msPerStep": 0.2055230660000002
+      },
+      "pinn": {
+        "mse": 241.19089705063936,
+        "mae": 8.417480476667217,
+        "energyDrift": 3.4137226086291554,
+        "msPerStep": 0.2014556839999993
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "EO-2",
+      "experiment": "EO",
+      "name": "Orbital motion",
+      "setting": "central gravity, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 2,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 0.4936838884501854,
+        "mae": 0.44120537445762237,
+        "energyDrift": 18.680754330082223,
+        "msPerStep": 0.201968425
+      },
+      "pinn": {
+        "mse": 0.17305418654557872,
+        "mae": 0.2628484994996506,
+        "energyDrift": 2.0561380102216047,
+        "msPerStep": 0.20305219000000307
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "EO-10",
+      "experiment": "EO",
+      "name": "Orbital motion",
+      "setting": "central gravity, 5% of the data, hidden [32, 32], state MSE in m and m/s",
+      "horizonSeconds": 10,
+      "trainPairs": 64,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 24.913508102150075,
+        "mae": 3.17906920101911,
+        "energyDrift": 555.9543491328883,
+        "msPerStep": 0.2039712855000007
+      },
+      "pinn": {
+        "mse": 2.411964691798785,
+        "mae": 1.1452614030216086,
+        "energyDrift": 5.752360707670376,
+        "msPerStep": 0.20401957250000033
+      },
+      "winner": "pinn"
     }
   ],
   "seeds": [
@@ -262,5 +354,5 @@
       "pinnDriftStd": 0.6902795311504129
     }
   ],
-  "takeaway": "On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839). Separate fits, not part of the pendulum seed sweep: Spring-mass at 2s (5% data): NN MSE 0.037, PINN MSE 0.011, winner pinn; Spring-mass at 10s (5% data): NN MSE 0.562, PINN MSE 0.335, winner pinn. Pendulum numbers above are unchanged from the previous run."
+  "takeaway": "On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839). Separate fits, not part of the pendulum seed sweep: Spring-mass at 2s (5% data): NN MSE 0.037, PINN MSE 0.011, winner pinn; Spring-mass at 10s (5% data): NN MSE 0.562, PINN MSE 0.335, winner pinn; Projectile with drag at 2s (5% data): NN MSE 4.300, PINN MSE 1.311, winner pinn; Projectile with drag at 10s (5% data): NN MSE 6.46e+2, PINN MSE 2.41e+2, winner pinn; Orbital motion at 2s (5% data): NN MSE 0.494, PINN MSE 0.173, winner pinn; Orbital motion at 10s (5% data): NN MSE 24.914, PINN MSE 2.412, winner pinn. Pendulum numbers above are unchanged from the previous run."
 }

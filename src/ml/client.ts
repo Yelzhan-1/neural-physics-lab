@@ -1,8 +1,9 @@
-import type { PendulumParams } from "../engine";
+import type { OrbitalParams, PendulumParams, ProjectileParams, SpringParams } from "../engine";
 import type { ExperimentId, InMessage, OutMessage } from "./messages";
+import type { OrbitalTrainResult } from "./orbital";
+import type { ProjectileTrainResult } from "./projectile";
 import type { ResultRow } from "./results";
 import type { TrainSummary } from "./session";
-import type { SpringParams } from "../engine";
 import type { SpringTrainResult } from "./spring";
 import type { TrainProgress } from "./train";
 
@@ -99,6 +100,82 @@ export class MlClient {
   ): Promise<{ nn: Float32Array; pinn: Float32Array; dt: number }> {
     const id = this.nextId++;
     return this.send({ id, type: "rollout-spring", initial, seconds, params }).then((message) => {
+      if (message.type !== "rollout") throw new Error("Unexpected worker response");
+      return { nn: new Float32Array(message.nn), pinn: new Float32Array(message.pinn), dt: message.dt };
+    });
+  }
+
+  trainProjectile(
+    args: {
+      fraction: number;
+      lambda: number;
+      params: ProjectileParams;
+      seed: number;
+      steps?: number;
+      calibrate?: boolean;
+      targetMs?: number;
+    },
+    onProgress?: (progress: TrainProgress) => void,
+  ): Promise<ProjectileTrainResult> {
+    const id = this.nextId++;
+    return this.send({ id, type: "train-projectile", ...args }, onProgress).then((message) => {
+      if (message.type !== "projectile-trained") throw new Error("Unexpected worker response");
+      return message.summary;
+    });
+  }
+
+  loadProjectile(): Promise<void> {
+    const id = this.nextId++;
+    return this.send({ id, type: "load-projectile" }).then((message) => {
+      if (message.type !== "pretrained") throw new Error("Unexpected worker response");
+    });
+  }
+
+  rolloutProjectile(
+    initial: number[],
+    seconds: number,
+    params: ProjectileParams,
+  ): Promise<{ nn: Float32Array; pinn: Float32Array; dt: number }> {
+    const id = this.nextId++;
+    return this.send({ id, type: "rollout-projectile", initial, seconds, params }).then((message) => {
+      if (message.type !== "rollout") throw new Error("Unexpected worker response");
+      return { nn: new Float32Array(message.nn), pinn: new Float32Array(message.pinn), dt: message.dt };
+    });
+  }
+
+  trainOrbital(
+    args: {
+      fraction: number;
+      lambda: number;
+      params: OrbitalParams;
+      seed: number;
+      steps?: number;
+      calibrate?: boolean;
+      targetMs?: number;
+    },
+    onProgress?: (progress: TrainProgress) => void,
+  ): Promise<OrbitalTrainResult> {
+    const id = this.nextId++;
+    return this.send({ id, type: "train-orbital", ...args }, onProgress).then((message) => {
+      if (message.type !== "orbital-trained") throw new Error("Unexpected worker response");
+      return message.summary;
+    });
+  }
+
+  loadOrbital(): Promise<void> {
+    const id = this.nextId++;
+    return this.send({ id, type: "load-orbital" }).then((message) => {
+      if (message.type !== "pretrained") throw new Error("Unexpected worker response");
+    });
+  }
+
+  rolloutOrbital(
+    initial: number[],
+    seconds: number,
+    params: OrbitalParams,
+  ): Promise<{ nn: Float32Array; pinn: Float32Array; dt: number }> {
+    const id = this.nextId++;
+    return this.send({ id, type: "rollout-orbital", initial, seconds, params }).then((message) => {
       if (message.type !== "rollout") throw new Error("Unexpected worker response");
       return { nn: new Float32Array(message.nn), pinn: new Float32Array(message.pinn), dt: message.dt };
     });
