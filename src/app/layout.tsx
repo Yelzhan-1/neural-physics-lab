@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { SpaceBackdrop } from "@/components/site/SpaceBackdrop";
 import "./globals.css";
 
 const inter = localFont({
@@ -30,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#04050d",
+  themeColor: "#0c0d0f",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -39,8 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${plex.variable} dark h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
-        <SpaceBackdrop />
+      <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}
       </body>
     </html>

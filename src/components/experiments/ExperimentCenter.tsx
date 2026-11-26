@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MlClient } from "@/ml/client";
 import type { ExperimentId } from "@/ml/messages";
 import { EXPERIMENT_STEPS } from "@/ml/constants";
+import bundledResults from "../../../public/results.json";
 import { DRIFT_NOTE, formatMetric, MSE_NOTE, takeaway, type ResultRow, type ResultsFile } from "@/ml/results";
 import type { TrainProgress } from "@/ml/train";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ function winnerLabel(winner: ResultRow["winner"]): string {
 
 export function ExperimentCenter() {
   const clientRef = useRef<MlClient | null>(null);
-  const [results, setResults] = useState<ResultsFile | null>(null);
+  const [results, setResults] = useState<ResultsFile | null>(bundledResults as ResultsFile);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [live, setLive] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState<ExperimentId | null>(null);
@@ -143,27 +144,31 @@ export function ExperimentCenter() {
   const headline = results?.rows.filter((row) => ["E1", "E2-5", "E3", "E4-3"].includes(row.id)) ?? [];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-6 sm:px-10">
-      <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-8 sm:px-10">
+      <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div>
-          <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">5% of the data</p>
-          <h1 className="font-num mt-2 text-[clamp(5.5rem,14vw,10rem)] leading-none tracking-[-0.08em] text-physics">
+          <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">
+            Limited data · seed {results?.seed ?? 2026}
+          </p>
+          <h1 className="font-num mt-3 text-[clamp(5.5rem,14vw,9rem)] leading-none tracking-[-0.08em] text-pinn">
             {single ? `${single.toFixed(1)}×` : "—"}
           </h1>
-          <p className="mt-3 max-w-md text-xl text-white/85">
-            {single
-              ? `${single.toFixed(1)}× lower error at 5% data — seed ${results?.seed ?? 2026}`
-              : (loadError ?? "Loading the measured result…")}
+          <p className="mt-4 max-w-sm text-[clamp(1.7rem,3vw,2.4rem)] leading-[1.05] font-medium tracking-[-0.04em] text-foreground">
+            Lower error with 5% of the data.
           </p>
-          <p className="mt-2 font-num text-sm text-white/50">
+          <p className="mt-3 text-sm text-muted-foreground">PINN compared with the standard NN.</p>
+          <p className="mt-2 font-num text-sm text-muted-foreground">
+            {single
+              ? `${single.toFixed(1)}× lower error at 5% data — seed ${results?.seed ?? 2026}. `
+              : (loadError ?? "Loading the measured result… ")}
             {mean ? `3-seed mean ≈ ${mean.toFixed(1)}×` : "3-seed mean ≈ 3.2×"}
           </p>
-          <Button variant="outline" onClick={exportJson} disabled={!results} className="mt-6 gap-1.5">
+          <Button variant="outline" onClick={exportJson} disabled={!results} className="mt-6">
             <Download className="size-3.5" />
             Export results (JSON)
           </Button>
         </div>
-        {headline.length > 0 && <FindingBars rows={headline} />}
+        {headline.length > 0 && <FindingBars rows={headline} meanNn={seed?.nnMseMean} meanPinn={seed?.pinnMseMean} />}
       </div>
       {progress && running && (
         <p className="font-num text-xs text-white/70">
@@ -324,7 +329,15 @@ const BAR_LABEL: Record<string, string> = {
   "E4-3": "3 s",
 };
 
-function FindingBars({ rows }: { rows: ResultRow[] }) {
+function FindingBars({
+  rows,
+  meanNn,
+  meanPinn,
+}: {
+  rows: ResultRow[];
+  meanNn?: number;
+  meanPinn?: number;
+}) {
   const values = rows.flatMap((row) => [row.nn.mse, row.pinn.mse]).filter((value) => value > 0);
   const floor = Math.min(...values) * 0.7;
   const ceil = Math.max(...values);
@@ -332,25 +345,41 @@ function FindingBars({ rows }: { rows: ResultRow[] }) {
   const span = Math.max(log(ceil) - log(floor), 0.2);
   const heightOf = (value: number) => `${Math.max(8, ((log(value) - log(floor)) / span) * 100)}%`;
   return (
-    <div className="rounded-2xl border border-white/10 p-5">
-      <div className="mb-4 flex gap-4 text-[11px] text-white/50">
-        <span className="flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm bg-nn" /> Standard NN</span>
-        <span className="flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm bg-pinn" /> PINN</span>
+    <div className="rounded-[10px] border border-hairline bg-panel p-5">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-medium text-foreground">Rollout error</h2>
+        <p className="font-num text-[10px] tracking-[0.12em] text-muted-foreground uppercase">State MSE · lower is better</p>
       </div>
-      <div className="flex h-48 items-end gap-4">
+      <div className="mb-4 flex gap-4 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5"><i className="inline-block size-2 bg-nn" /> Standard NN</span>
+        <span className="flex items-center gap-1.5"><i className="inline-block size-2 bg-pinn" /> PINN</span>
+      </div>
+      <div className="flex h-52 items-end gap-3 sm:h-64">
         {rows.map((row) => (
-          <div key={row.id} className="flex h-full flex-1 items-end justify-center gap-1">
-            <span className="w-3 rounded-t bg-nn" style={{ height: heightOf(row.nn.mse) }} />
-            <span className="w-3 rounded-t bg-pinn" style={{ height: heightOf(row.pinn.mse) }} />
+          <div key={row.id} className="flex h-full flex-1 items-end justify-center gap-1.5">
+            <span className="w-5 rounded-t-[3px] bg-nn sm:w-7" style={{ height: heightOf(row.nn.mse) }} />
+            <span className="w-5 rounded-t-[3px] bg-pinn sm:w-7" style={{ height: heightOf(row.pinn.mse) }} />
           </div>
         ))}
       </div>
-      <div className="mt-2 flex gap-4">
+      <div className="mt-2 flex gap-3 border-b border-hairline pb-4">
         {rows.map((row) => (
-          <p key={row.id} className="flex-1 text-center text-[11px] text-white/45">
-            {BAR_LABEL[row.id] ?? row.name}
+          <p key={row.id} className="flex-1 text-center text-[11px] leading-tight text-muted-foreground">
+            <span className="font-num text-foreground">{BAR_LABEL[row.id] ?? row.id}</span>
+            <br />
+            {row.name}
           </p>
         ))}
+      </div>
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+        <p className="font-num text-[11px] leading-relaxed text-foreground">
+          <span className="block text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+            5% data · three-seed mean MSE
+          </span>
+          {meanNn != null ? meanNn.toFixed(2) : "—"} <span className="text-nn">Standard NN</span>
+          {"  |  "}
+          {meanPinn != null ? meanPinn.toFixed(2) : "—"} <span className="text-pinn">PINN</span>
+        </p>
       </div>
     </div>
   );

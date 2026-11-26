@@ -6,15 +6,12 @@ export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" fill="none" aria-hidden className={className}>
       <path
-        d="M16 6 L10 16 L22 26"
+        d="M8 22 L16 8 L24 22"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="16" cy="6" r="1.7" fill="#22d3ee" />
-      <circle cx="10" cy="16" r="2.2" fill="#060a12" stroke="#f5b942" strokeWidth="1.5" />
-      <circle cx="22" cy="26" r="2.4" fill="#b388ff" />
     </svg>
   );
 }
@@ -30,7 +27,6 @@ export type SiteSection = (typeof LINKS)[number]["id"];
 
 export function SiteHeader({
   current,
-  overlay = false,
   children,
 }: {
   current?: SiteSection;
@@ -38,22 +34,17 @@ export function SiteHeader({
   children?: ReactNode;
 }) {
   return (
-    <header
-      className={cn(
-        "z-30 flex items-center justify-between gap-3 px-4 sm:px-8",
-        overlay ? "pointer-events-none fixed inset-x-0 top-0 h-16" : "relative h-16",
-      )}
-    >
+    <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-hairline px-3 sm:px-6">
       <Link
         href="/"
-        className="pointer-events-auto flex items-center gap-2 text-[15px] font-medium tracking-[-0.04em] text-white"
+        className="flex min-w-0 items-center gap-2 text-[14px] font-medium tracking-[-0.04em] text-foreground"
       >
-        <LogoMark className="size-6 text-white" />
-        Neural Physics Lab
+        <LogoMark className="size-5 shrink-0 text-foreground" />
+        <span className="truncate">Neural Physics Lab</span>
       </Link>
       <nav
         aria-label="Pages"
-        className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-white/12 bg-[#060a12]/80 px-1 py-1 text-[13px] backdrop-blur-md"
+        className="flex shrink-0 items-center rounded-full border border-hairline p-0.5 text-[12px] sm:text-[13px]"
       >
         {LINKS.map((link) => {
           const active = link.id === current;
@@ -63,8 +54,9 @@ export function SiteHeader({
               href={link.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "rounded-full px-2.5 py-1 sm:px-3",
-                active ? "text-physics" : "text-white/55 hover:text-white",
+                "rounded-full px-2 py-1 sm:px-3",
+                active ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:text-foreground",
+                link.id === "overview" && "max-[420px]:hidden",
               )}
             >
               {link.label}
@@ -79,9 +71,9 @@ export function SiteHeader({
 
 export function SiteFooter() {
   return (
-    <footer className="flex items-center justify-between px-4 py-4 font-num text-[10px] tracking-[0.14em] text-white/35 uppercase sm:px-8">
+    <footer className="flex h-10 shrink-0 items-center justify-between gap-3 border-t border-hairline px-3 font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase sm:px-6">
       <span>KIMEP AI Challenge</span>
-      <span>Almaty</span>
+      <span className="text-right">Almaty / 27 Nov 2026</span>
     </footer>
   );
 }

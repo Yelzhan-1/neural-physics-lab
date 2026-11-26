@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_SPRING, type SpringParams } from "@/engine";
 import { SLOTS } from "@/components/scene/runtime";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
-import { SystemSelector } from "@/components/systems/SystemSelector";
-import { Button } from "@/components/ui/button";
 import { ParamSlider } from "@/components/lab/ControlPanel";
+import { Instrument, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
 import { SEED, SPRING_LIVE_STEPS } from "@/ml/constants";
@@ -46,6 +45,7 @@ export function SpringLab() {
   const [progress, setProgress] = useState<string>("");
   const [badge, setBadge] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timeRef = useRef<HTMLSpanElement>(null);
   const clientRef = useRef<MlClient | null>(null);
   const cacheRef = useRef<CacheFile | null>(null);
   const paramsRef = useRef(params);
@@ -116,46 +116,58 @@ export function SpringLab() {
       const w = rect.width;
       const h = rect.height;
       context.clearRect(0, 0, w, h);
-      const laneH = h / 3;
+      const stacked = w < 700;
+      context.strokeStyle = "rgba(237,230,218,0.10)";
+      context.lineWidth = 1;
+      context.beginPath();
+      if (stacked) {
+        context.moveTo(12, h / 3);
+        context.lineTo(w - 12, h / 3);
+        context.moveTo(12, (2 * h) / 3);
+        context.lineTo(w - 12, (2 * h) / 3);
+      } else {
+        context.moveTo(w / 3, 12);
+        context.lineTo(w / 3, h - 12);
+        context.moveTo((2 * w) / 3, 12);
+        context.lineTo((2 * w) / 3, h - 12);
+      }
+      context.stroke();
       LANES.forEach((lane, index) => {
-        const top = index * laneH;
-        const mid = top + laneH * 0.55;
-        const wall = 28;
-        const rest = w * 0.38;
-        const scale = Math.min(120, w * 0.16);
+        const left = stacked ? 0 : (w / 3) * index;
+        const top = stacked ? (h / 3) * index : 0;
+        const laneW = stacked ? w : w / 3;
+        const laneH = stacked ? h / 3 : h;
+        const mid = top + laneH * 0.46;
+        const wall = left + 22;
+        const rest = left + laneW * 0.42;
+        const scale = Math.min(100, laneW * 0.2);
         const x = runtime.states[index][0];
-        const massX = rest + x * scale;
-        context.strokeStyle = "rgba(255,255,255,0.18)";
-        context.lineWidth = 3;
+        const massX = Math.min(left + laneW - 28, rest + x * scale);
+        context.strokeStyle = "rgba(237,230,218,0.28)";
+        context.lineWidth = 2;
         context.beginPath();
-        context.moveTo(wall, top + 16);
-        context.lineTo(wall, top + laneH - 16);
+        context.moveTo(wall, top + 18);
+        context.lineTo(wall, top + laneH - 36);
         context.stroke();
         context.strokeStyle = lane.color;
         context.lineWidth = 1.6;
         context.beginPath();
         context.moveTo(wall, mid);
-        const coils = 14;
-        const span = Math.max(12, massX - 18 - wall);
+        const coils = 12;
+        const span = Math.max(12, massX - 16 - wall);
         for (let coil = 0; coil <= coils; coil++) {
           const px = wall + (span * coil) / coils;
-          const py = coil === 0 || coil === coils ? mid : mid + (coil % 2 === 0 ? 8 : -8);
+          const py = coil === 0 || coil === coils ? mid : mid + (coil % 2 === 0 ? 7 : -7);
           context.lineTo(px, py);
         }
         context.stroke();
         context.fillStyle = lane.color;
         context.globalAlpha = runtime.active[index] ? 0.95 : 0.35;
         context.beginPath();
-        context.roundRect(massX - 18, mid - 16, 36, 32, 6);
+        context.roundRect(massX - 16, mid - 14, 32, 28, 4);
         context.fill();
         context.globalAlpha = 1;
-        context.fillStyle = "rgba(255,255,255,0.72)";
-        context.font = "12px sans-serif";
-        context.fillText(lane.label, wall + 12, top + 18);
-        if (runtime.active[index]) {
-          context.fillStyle = "rgba(255,255,255,0.45)";
-          context.fillText(`${runtime.energy(index).toFixed(3)} J`, w - 72, top + 18);
-        }
+        drawLaneLabel(context, lane.label, lane.color, left + laneW / 2, top + laneH - 16);
       });
     };
     const loop = (now: number) => {
@@ -163,6 +175,7 @@ export function SpringLab() {
       last = now;
       runtime.tick(elapsed);
       draw();
+      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -262,58 +275,94 @@ export function SpringLab() {
   };
 
   return (
-    <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="min-w-0">
-        <SystemSelector active="spring-mass" className="mb-4" />
-        <SpotlightCard className="overflow-hidden">
-          <div className="h-[480px]">
-            <canvas
-              ref={canvasRef}
-              data-testid="spring-scene"
-              className="block h-full w-full"
-              role="img"
-              aria-label="Three spring-mass oscillators: physics, standard NN, and PINN"
-            />
-          </div>
-          <div className="flex items-center gap-2 border-t border-white/[0.07] px-4 py-3">
-            <Button size="sm" onClick={() => setPlaying((value) => !value)} className="w-[88px]">
-              {playing ? "Pause" : "Play"}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => runtime.reset()}>
-              Reset
-            </Button>
-            {badge && <p className="ml-auto text-xs text-white/70">{badge}</p>}
-          </div>
-        </SpotlightCard>
-      </div>
-      <div className="grid content-start gap-4">
-        <SpotlightCard className="p-5" tint="167 139 250">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-white">Train models</h2>
-            <p data-testid="train-status" className="font-num text-[11px] tracking-wide text-white/55 uppercase">
-              {status}
-            </p>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Same 20% of the trajectories, same initial weights. The PINN residual is m x″ + c x′ + k x − A sin(ω t).
+    <Instrument
+      title="Spring-mass"
+      active="spring-mass"
+      controls={
+        <>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            The PINN residual is m x″ + c x′ + k x − A sin(ω t).
           </p>
-          <Button className="mt-4 h-10 w-full font-semibold" disabled={status === "training"} onClick={train}>
-            {status === "training" ? "Training…" : "Train models"}
-          </Button>
-          <p className="mt-2 font-num text-xs text-white/55">{progress || "data loss"}</p>
-          <div className="mt-3 h-24 overflow-hidden rounded-lg bg-black/25">
-            <LossChart nn={nnLoss} pinn={pinnLoss} />
-          </div>
-          {note && <p className="mt-3 text-xs text-white/70">{note}</p>}
-          {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
-        </SpotlightCard>
-        <SpotlightCard className="grid gap-4 p-5">
           <ParamSlider symbol="x" name="Release" unit="m" value={release} min={-1.2} max={1.2} step={0.01} digits={2} onChange={onRelease} />
           <ParamSlider symbol="k" name="Stiffness" unit="N/m" value={params.k} min={0.5} max={12} step={0.1} digits={1} onChange={(k) => onParams({ ...params, k })} />
           <ParamSlider symbol="c" name="Damping" unit="N·s/m" value={params.c} min={0} max={2} step={0.01} digits={2} onChange={(c) => onParams({ ...params, c })} />
           <ParamSlider symbol="m" name="Mass" unit="kg" value={params.m} min={0.2} max={5} step={0.1} digits={1} onChange={(m) => onParams({ ...params, m })} />
-        </SpotlightCard>
-      </div>
-    </main>
+          <div className="h-16">
+            <LossChart nn={nnLoss} pinn={pinnLoss} />
+          </div>
+          {note && <p className="text-xs text-muted-foreground">{note}</p>}
+          {error && <p className="text-xs text-red-300">{error}</p>}
+        </>
+      }
+      stage={
+        <canvas
+          ref={canvasRef}
+          data-testid="spring-scene"
+          className="absolute inset-0 block h-full w-full"
+          role="img"
+          aria-label="Three spring-mass oscillators: physics, standard NN, and PINN"
+        />
+      }
+      timeline={
+        <>
+          <PlayButton playing={playing} onClick={() => setPlaying((value) => !value)} />
+          <button type="button" onClick={() => runtime.reset()} className="text-xs text-muted-foreground">
+            Reset
+          </button>
+          <span className="ml-auto font-num text-[11px] text-foreground">
+            <span ref={timeRef}>0.00</span> s
+          </span>
+        </>
+      }
+      metrics={
+        <>
+          <p data-testid="train-status" className="sr-only">
+            {status}
+          </p>
+          <LiveSparks
+            aLabel="Position error"
+            bLabel="Energy drift"
+            formatB={driftText}
+            sample={() => {
+              const origin = runtime.states[0][0];
+              const energy = runtime.energy(0);
+              const miss = (slot: number) =>
+                runtime.active[slot] ? Math.abs(runtime.states[slot][0] - origin) : Number.NaN;
+              const drift = (slot: number) =>
+                runtime.active[slot] && Math.abs(energy) > 1e-9
+                  ? Math.abs(runtime.energy(slot) - energy) / Math.abs(energy)
+                  : Number.NaN;
+              return { aNn: miss(1), aPinn: miss(2), bNn: drift(1), bPinn: drift(2) };
+            }}
+          />
+          <TrainButton disabled={status === "training"} onClick={train}>
+            {status === "training" ? "Training…" : "Live train (~20 s)"}
+          </TrainButton>
+          <p className="text-center font-num text-[11px] text-muted-foreground">
+            {status === "training" ? progress || "Training…" : badge ?? "Ready to train"}
+          </p>
+        </>
+      }
+    />
   );
+}
+
+function drawLaneLabel(
+  context: CanvasRenderingContext2D,
+  label: string,
+  color: string,
+  x: number,
+  y: number,
+) {
+  context.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  const textWidth = context.measureText(label).width;
+  const start = x - (6 + 8 + textWidth) / 2;
+  context.fillStyle = color;
+  context.beginPath();
+  context.arc(start + 3, y, 3, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "rgba(237,230,218,0.82)";
+  context.fillText(label, start + 14, y);
 }
