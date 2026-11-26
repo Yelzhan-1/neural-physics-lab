@@ -27,6 +27,10 @@ export interface TrainProgress {
   dataLoss: number;
   physicsLoss: number | null;
   totalLoss: number;
+  /** Probe steps before the step budget is chosen, then the timed run. */
+  phase?: "calibrating" | "training";
+  /** Seconds of training still expected, both models included. */
+  etaSeconds?: number | null;
 }
 
 export interface TrainOptions {
@@ -41,6 +45,10 @@ export interface TrainOptions {
   scheduleSeed: number;
   onProgress?: (progress: TrainProgress) => void;
   shouldStop?: () => boolean;
+  /** Optimizer steps already completed, so a probe and its continuation share one cosine. */
+  startStep?: number;
+  /** Full budget the cosine runs over. Defaults to `steps`. */
+  totalSteps?: number;
 }
 
 interface LossTensors {
@@ -66,7 +74,13 @@ export function cosineLearningRate(step: number, steps: number, start: number, e
   return end + 0.5 * (start - end) * (1 + Math.cos(Math.PI * t));
 }
 
-export function createModel(initSeed: number, hidden: readonly number[] = HIDDEN_UNITS): tf.Sequential {
+export function createModel(
+  initSeed: number,
+  hidden: readonly number[] = HIDDEN_UNITS,
+  shape: { inputs?: number; outputs?: number } = {},
+): tf.Sequential {
+  const inputs = shape.inputs ?? 6;
+  const outputs = shape.outputs ?? 4;
   const model = tf.sequential();
   hidden.forEach((units, layer) => {
     model.add(
@@ -75,13 +89,13 @@ export function createModel(initSeed: number, hidden: readonly number[] = HIDDEN
         activation: "tanh",
         kernelInitializer: tf.initializers.glorotUniform({ seed: initSeed + layer }),
         biasInitializer: "zeros",
-        ...(layer === 0 ? { inputShape: [6] as [number] } : {}),
+        ...(layer === 0 ? { inputShape: [inputs] as [number] } : {}),
       }),
     );
   });
   model.add(
     tf.layers.dense({
-      units: 4,
+      units: outputs,
       kernelInitializer: tf.initializers.glorotUniform({ seed: initSeed + hidden.length }),
       biasInitializer: "zeros",
     }),
@@ -195,13 +209,16 @@ export async function trainModel(
   let totalLoss = Number.NaN;
   const kept: { data: tf.Tensor | null; phys: tf.Tensor | null } = { data: null, phys: null };
   try {
-    const yieldEvery = options.steps > 400 ? 20 : 4;
+    const startStep = options.startStep ?? 0;
+    const totalSteps = options.totalSteps ?? options.steps;
+    const yieldEvery = totalSteps > 400 ? 20 : 4;
     for (let step = 0; step < options.steps; step++) {
       if (options.shouldStop?.()) break;
+      const globalStep = startStep + step;
       // Adam reads this number on every step. The node build has no setLearningRate.
       (optimizer as unknown as { learningRate: number }).learningRate = cosineLearningRate(
-        step,
-        options.steps,
+        globalStep,
+        totalSteps,
         learningRate,
         learningRateEnd,
       );
@@ -237,8 +254,8 @@ export async function trainModel(
       }
       options.onProgress?.({
         model: options.physics ? "pinn" : "nn",
-        step: step + 1,
-        steps: options.steps,
+        step: startStep + step + 1,
+        steps: totalSteps,
         dataLoss,
         physicsLoss: options.physics ? physicsLoss : null,
         totalLoss,

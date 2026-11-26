@@ -7,6 +7,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { PendulumScene } from "@/components/scene/PendulumScene";
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { useLabRuntime } from "@/components/scene/useLabRuntime";
+import { ChaosFan } from "@/components/landing/ChaosFan";
 import { ResultsStrip } from "@/components/landing/ResultsStrip";
 import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { cn } from "@/lib/utils";
@@ -17,13 +18,13 @@ const HEADLINE = ["AI", "that", "learns", "from", "the"];
 const HEADLINE_ACCENT = "laws of nature";
 
 const word: Variants = {
-  hidden: { opacity: 0, y: 28, filter: "blur(14px)" },
-  shown: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.9, ease: EASE } },
+  hidden: { opacity: 1, y: 14 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
 };
 
 const rise: Variants = {
-  hidden: { opacity: 0, y: 26, filter: "blur(10px)" },
-  shown: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.8, ease: EASE } },
+  hidden: { opacity: 1, y: 12 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
 };
 
 const stagger: Variants = {
@@ -146,6 +147,8 @@ export function Landing() {
           </motion.ul>
         </motion.div>
       </section>
+
+      <ChaosFan />
 
       <div
         ref={chaptersRef}

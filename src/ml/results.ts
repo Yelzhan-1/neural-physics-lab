@@ -6,7 +6,7 @@ export type Winner = "nn" | "pinn" | "tie";
 
 export interface ResultRow {
   id: string;
-  experiment: "E1" | "E2" | "E3" | "E4";
+  experiment: "E1" | "E2" | "E3" | "E4" | "ES" | "EP" | "EO";
   name: string;
   setting: string;
   horizonSeconds: number;

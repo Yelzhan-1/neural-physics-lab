@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Lab } from "@/components/lab/Lab";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
     "Train a standard neural network and a physics-informed one in the browser, then watch both roll out beside the RK4 double pendulum.",
 };
 
-export default function LabPage() {
+export default function LabPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ demo?: string; system?: string }>;
+}) {
   return (
     <>
       <SiteHeader>
@@ -30,7 +35,14 @@ export default function LabPage() {
           About
         </Link>
       </SiteHeader>
-      <Lab />
+      <Suspense fallback={<main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-16 text-sm text-white/50">Loading the lab…</main>}>
+        <LabGate searchParams={searchParams} />
+      </Suspense>
     </>
   );
+}
+
+async function LabGate({ searchParams }: { searchParams: Promise<{ demo?: string; system?: string }> }) {
+  const params = await searchParams;
+  return <Lab demo={params.demo === "1"} system={params.system ?? "pendulum"} />;
 }

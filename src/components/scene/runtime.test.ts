@@ -112,6 +112,17 @@ describe("LabRuntime", () => {
     expect(runtime.trails[0].length).toBe(0);
   });
 
+  it("seeks by integrating RK4 from the release pose", () => {
+    const runtime = new LabRuntime();
+    runtime.setInitialAngles(1.1, -0.4);
+    runtime.seek(1.5);
+    const expected = Float64Array.from([1.1, -0.4, 0, 0]);
+    const steps = Math.round(1.5 / DEFAULT_DT);
+    for (let i = 0; i < steps; i++) rk4Step(expected, runtime.params, DEFAULT_DT, expected);
+    expect(Array.from(runtime.states[0])).toEqual(Array.from(expected));
+    expect(runtime.time).toBeCloseTo(steps * DEFAULT_DT, 8);
+  });
+
   it("notifies frame listeners until they unsubscribe", () => {
     const runtime = new LabRuntime();
     let calls = 0;

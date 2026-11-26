@@ -15,11 +15,25 @@ function nearestSize(value: number): number {
   return SIZES.reduce((best, size) => (Math.abs(size - value) < Math.abs(best - size) ? size : best));
 }
 
-export function TrainPanel({ models }: { models: LabModels }) {
+export function TrainPanel({
+  models,
+  onUsePretrained,
+}: {
+  models: LabModels;
+  onUsePretrained?: () => void;
+}) {
   const [percent, setPercent] = useState(20);
   const [lambda, setLambda] = useState(DEFAULT_LAMBDA);
   const { status, progress, summary } = models;
-  const busy = status === "training";
+  const busy = status === "training" || status === "loading";
+  const etaLabel =
+    models.phase === "calibrating"
+      ? "Calibrating…"
+      : models.phase === "training" && models.etaSeconds != null
+        ? `Training… ${Math.max(0, Math.ceil(models.etaSeconds))} s left`
+        : status === "pretrained"
+          ? `Pretrained · ${models.pretrainedSteps} steps`
+          : null;
 
   return (
     <SpotlightCard className="p-5 sm:p-6" tint="167 139 250">
@@ -76,12 +90,34 @@ export function TrainPanel({ models }: { models: LabModels }) {
         </details>
 
         <Button
-          className="mt-5 w-full font-medium shadow-[0_0_24px_-8px_var(--pinn)]"
+          className="mt-5 h-10 w-full text-sm font-semibold shadow-[0_0_24px_-8px_var(--pinn)]"
           disabled={busy}
-          onClick={() => models.train(percent / 100, lambda)}
+          onClick={models.liveTrain}
         >
-          {busy ? "Training…" : status === "trained" ? "Train again" : "Train models"}
+          Live train (~20 s)
         </Button>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={onUsePretrained ?? models.usePretrained}
+          >
+            Use pretrained
+          </Button>
+          <Button variant="outline" disabled={busy} onClick={models.quickTrain}>
+            Quick train (≤5 s)
+          </Button>
+        </div>
+        {etaLabel && (
+          <p data-testid="train-eta" className="mt-3 font-num text-lg tracking-tight text-white">
+            {etaLabel}
+          </p>
+        )}
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Live train times a few steps on this device, then picks a step count so both models finish
+          in about 16 seconds. The loss curves run live. The rollout is one batched pass, then the
+          lab jumps to where the networks split and plays at 2×.
+        </p>
 
         <div className="mt-4 h-24 overflow-hidden rounded-lg bg-black/25 ring-1 ring-white/5">
           <LossChart nn={models.nnLoss} pinn={models.pinnLoss} />
@@ -102,6 +138,15 @@ export function TrainPanel({ models }: { models: LabModels }) {
               : "data loss"}
           </span>
         </div>
+
+        <Button
+          variant="ghost"
+          className="mt-3 w-full"
+          disabled={busy}
+          onClick={() => models.train(percent / 100, lambda)}
+        >
+          Train your own
+        </Button>
 
         {summary && status === "trained" && (
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

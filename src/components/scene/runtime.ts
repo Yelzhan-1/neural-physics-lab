@@ -239,6 +239,33 @@ export class LabRuntime {
     this.dragging = dragging;
   }
 
+  /**
+   * Moves the shared clock to `seconds` by integrating RK4 from the release
+   * pose. Model slots are sampled from their trajectories at that time.
+   */
+  seek(seconds: number): void {
+    const steps = Math.max(0, Math.round(seconds / this.dt));
+    const physics = this.states[PHYSICS_SLOT];
+    physics.set(this.initial);
+    for (let i = 0; i < steps; i++) rk4Step(physics, this.params, this.dt, physics);
+    this.stepCount = steps;
+    this.time = this.stepCount * this.dt;
+    this.accumulator = 0;
+    for (const trail of this.trails) trail.clear();
+    this.history.clear();
+    this.comparison.clear();
+    for (let slot = 1; slot < SLOT_COUNT; slot++) this.sampleTrajectory(slot);
+    this.refreshDerived();
+    const release = energy(this.initial, this.params);
+    this.initialEnergy = release.total;
+    this.maxEnergyError = Math.abs(this.energy.total - this.initialEnergy);
+    this.history.push(this.time, this.energy);
+    this.recordComparison();
+    this.recordTrails();
+    this.epoch++;
+    for (let i = 0; i < this.listeners.length; i++) this.listeners[i]();
+  }
+
   reset(): void {
     this.time = 0;
     this.accumulator = 0;

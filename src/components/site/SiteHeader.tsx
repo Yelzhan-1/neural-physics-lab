@@ -34,14 +34,11 @@ export function SiteHeader({ children }: { children?: ReactNode }) {
         className="group flex min-w-0 items-center gap-2 text-[13px] font-semibold tracking-tight whitespace-nowrap text-white sm:gap-2.5 sm:text-[15px]"
       >
         <LogoMark className="size-7 shrink-0 transition-transform duration-500 group-hover:rotate-[-12deg]" />
-        <span>
-          <span className="sm:hidden">Neural Lab</span>
-          <span className="hidden sm:inline">
-            Neural Physics <span className="text-white/50">Lab</span>
-          </span>
+        <span className="text-[12px] sm:text-[15px]">
+          Neural Physics <span className="text-white/50">Lab</span>
         </span>
       </Link>
-      <nav className="flex shrink-0 items-center gap-1 text-sm sm:gap-2">{children}</nav>
+      <nav className="flex shrink-0 items-center gap-1 text-xs sm:gap-2 sm:text-sm">{children}</nav>
     </header>
   );
 }

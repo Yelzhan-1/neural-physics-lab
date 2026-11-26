@@ -60,6 +60,24 @@ export const ROLLOUT_SECONDS = 14;
 
 export const DATA_FRACTIONS = [5, 10, 20, 50, 100] as const;
 
+/** Headless pretrain budget committed under public/models. */
+export const PRETRAIN_STEPS = HEADLESS_STEPS;
+
+/** Both models together should finish near the middle of a 20 s stage slot. */
+export const LIVE_TRAIN_TARGET_MS = 16_500;
+
+/** Quick train, including the speed probe, stays under five seconds. */
+export const QUICK_TRAIN_TARGET_MS = 3_500;
+
+export const DEMO_ROLLOUT_URL = "/models/double-pendulum/demo-rollout.json";
+
+/** Release pose shipped in the demo rollout, degrees. */
+export const DEMO_THETA1 = 120;
+export const DEMO_THETA2 = -20;
+
+/** Live spring training. The network is small, so this finishes quickly. */
+export const SPRING_LIVE_STEPS = 160;
+
 export const TRAIN_TRAJECTORIES = 8;
 export const TEST_TRAJECTORIES = 4;
 export const TRAIN_SECONDS = 3;

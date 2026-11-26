@@ -1,6 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
 import { MODEL_DT, NORM } from "./constants";
-import { featuresFromState } from "./features";
 
 function asTensor(value: tf.Tensor | tf.Tensor[] | tf.SymbolicTensor | tf.SymbolicTensor[]): tf.Tensor {
   if (Array.isArray(value)) throw new Error("expected one output tensor");
@@ -8,8 +7,9 @@ function asTensor(value: tf.Tensor | tf.Tensor[] | tf.SymbolicTensor | tf.Symbol
 }
 
 /**
- * Autoregressive rollout. The first sample is the release state.
- * Each step feeds sin/cos features and adds the predicted state change.
+ * Autoregressive rollout of the whole horizon in one graph pass.
+ * State stays on the device; the only readback is the finished trajectory.
+ * The first sample is the release state.
  */
 export function rolloutModel(
   model: tf.LayersModel,
@@ -20,24 +20,43 @@ export function rolloutModel(
   if (Math.abs(dt - MODEL_DT) > 1e-9) {
     throw new Error(`Rollout dt ${dt} does not match the trained step ${MODEL_DT}`);
   }
-  const out = new Float32Array((steps + 1) * 4);
-  const state = new Float64Array(4);
-  for (let i = 0; i < 4; i++) state[i] = initial[i];
-  out.set(state, 0);
-  const features = new Float32Array(6);
-  for (let step = 0; step < steps; step++) {
-    featuresFromState(state, features);
-    const delta = tf.tidy(() => {
-      const input = tf.tensor2d(features, [1, 6]);
-      return asTensor(model.apply(input, { training: false })).dataSync();
-    });
-    state[0] += delta[0] * NORM.dTheta;
-    state[1] += delta[1] * NORM.dTheta;
-    state[2] += delta[2] * NORM.dOmega;
-    state[3] += delta[3] * NORM.dOmega;
-    out.set(state, (step + 1) * 4);
+  const scale = tf.tensor1d([NORM.dTheta, NORM.dTheta, NORM.dOmega, NORM.dOmega]);
+  const rows: tf.Tensor2D[] = [];
+  let state = tf.tensor2d([[initial[0], initial[1], initial[2], initial[3]]]);
+  rows.push(state);
+  try {
+    for (let step = 0; step < steps; step++) {
+      const next = tf.tidy(() => {
+        const theta1 = state.slice([0, 0], [1, 1]);
+        const theta2 = state.slice([0, 1], [1, 1]);
+        const omega1 = state.slice([0, 2], [1, 1]);
+        const omega2 = state.slice([0, 3], [1, 1]);
+        const features = tf.concat(
+          [
+            tf.sin(theta1),
+            tf.cos(theta1),
+            tf.sin(theta2),
+            tf.cos(theta2),
+            omega1.div(NORM.omega),
+            omega2.div(NORM.omega),
+          ],
+          1,
+        );
+        const predicted = asTensor(model.apply(features, { training: false }));
+        return state.add(predicted.mul(scale)) as tf.Tensor2D;
+      });
+      rows.push(next);
+      state = next;
+    }
+    const stacked = tf.concat(rows, 0);
+    const raw = stacked.dataSync();
+    const out = new Float32Array(raw);
+    stacked.dispose();
+    return out;
+  } finally {
+    scale.dispose();
+    for (const row of rows) row.dispose();
   }
-  return out;
 }
 
 /** Milliseconds per model step, measured after a short warmup. */
