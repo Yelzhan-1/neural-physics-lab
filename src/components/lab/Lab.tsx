@@ -7,6 +7,7 @@ import { divergenceTime } from "@/components/scene/divergence";
 import { PendulumScene, type SceneLayout } from "@/components/scene/PendulumScene";
 import type { SceneView } from "@/components/scene/draw";
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
+import { ChaosFan } from "@/components/landing/ChaosFan";
 import { useLabRuntime } from "@/components/scene/useLabRuntime";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { OrbitalLab, ProjectileLab } from "@/components/motion/MotionLab";
 import { SpringLab } from "@/components/spring/SpringLab";
 import { ControlPanel } from "./ControlPanel";
-import { FractionRow, Instrument, PlayButton, TrainButton } from "./Instrument";
+import { FractionRow, Instrument, ModelToggles, PlayButton, TrainButton } from "./Instrument";
 import { ModelPanel } from "./ModelPanel";
 import { PhysicsPanel } from "./PhysicsPanel";
 import { ChallengePanel } from "./ChallengePanel";
@@ -74,6 +75,7 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
   const models = useLabModels(runtime, { theta1, theta2, params }, demo, onLiveReady);
   const pendingRestore = useRef(false);
   const timeRef = useRef<HTMLSpanElement>(null);
+  const dockTimeRef = useRef<HTMLSpanElement>(null);
   const rangeRef = useRef<HTMLInputElement>(null);
   const scrubbing = useRef(false);
 
@@ -123,7 +125,9 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
 
   useEffect(() => {
     return runtime.onFrame(() => {
-      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
+      const clock = runtime.time.toFixed(2);
+      if (timeRef.current) timeRef.current.textContent = clock;
+      if (dockTimeRef.current) dockTimeRef.current.textContent = clock;
       if (rangeRef.current && !scrubbing.current) rangeRef.current.value = String(runtime.time);
     });
   }, [runtime]);
@@ -169,25 +173,10 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
       active="double-pendulum"
       controls={
         <>
-          <div>
-            <p className="font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Models</p>
-            <div className="mt-2 grid gap-2">
-              {SLOTS.map((slot) => (
-                <label key={slot.id} className="flex items-center justify-between gap-2 text-xs text-foreground">
-                  <span className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full" style={{ background: slot.color }} />
-                    {slot.id === "physics" ? "Physics" : slot.label}
-                  </span>
-                  <Switch
-                    size="sm"
-                    checked={shown[slot.id]}
-                    onCheckedChange={(checked) => setShown((current) => ({ ...current, [slot.id]: checked }))}
-                    aria-label={slot.label}
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
+          <ModelToggles
+            shown={shown}
+            onChange={(id, checked) => setShown((current) => ({ ...current, [id]: checked }))}
+          />
           <FractionRow value={percent} onChange={setPercent} />
           <ControlPanel
             part="primary"
@@ -289,6 +278,12 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
                   <PhysicsPanel runtime={runtime} />
                 </div>
               </details>
+              <div className="h-28 overflow-hidden rounded-[6px] border border-hairline">
+                <ChaosFan compact />
+              </div>
+              <p className="font-num text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                Chaos fan · 50 paths
+              </p>
               <ChallengePanel
                 models={models}
                 runtime={runtime}
@@ -344,8 +339,24 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
       metrics={
         <>
           <ModelPanel runtime={runtime} slotsReady={models.slotsReady} />
-          <TrainButton disabled={models.status === "training" || models.status === "loading"} onClick={models.liveTrain} />
-          <p className="text-center font-num text-[11px] text-muted-foreground">{statusLine}</p>
+          <TrainButton
+            className="max-lg:hidden"
+            disabled={models.status === "training" || models.status === "loading"}
+            onClick={models.liveTrain}
+          />
+          <p className="text-center font-num text-[10px] text-balance text-muted-foreground">{statusLine}</p>
+        </>
+      }
+      dock={
+        <>
+          <span className="font-num w-16 shrink-0 text-[11px] text-foreground">
+            <span ref={dockTimeRef}>0.00</span> s
+          </span>
+          <TrainButton
+            className="mt-0"
+            disabled={models.status === "training" || models.status === "loading"}
+            onClick={models.liveTrain}
+          />
         </>
       }
     />

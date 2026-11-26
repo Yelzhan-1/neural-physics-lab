@@ -38,13 +38,11 @@ export function Landing() {
       setBeat(index);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "PageDown" && event.key !== "PageUp") {
-        return;
-      }
+      const keys = ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"];
+      if (!keys.includes(event.key)) return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest("input, textarea, select")) return;
       event.preventDefault();
-      const direction = event.key === "ArrowDown" || event.key === "PageDown" ? 1 : -1;
       const top = root.scrollTop;
       let index = 0;
       let best = Infinity;
@@ -55,7 +53,9 @@ export function Landing() {
           index = i;
         }
       });
-      sections[Math.min(sections.length - 1, Math.max(0, index + direction))]?.scrollIntoView({
+      const next =
+        event.key === "Home" ? 0 : event.key === "End" ? sections.length - 1 : index + (event.key === "ArrowDown" || event.key === "PageDown" ? 1 : -1);
+      sections[Math.min(sections.length - 1, Math.max(0, next))]?.scrollIntoView({
         behavior: reduced ? "auto" : "smooth",
       });
     };
@@ -73,8 +73,13 @@ export function Landing() {
   };
 
   return (
-    <div ref={scroller} className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto">
-      <ol className="fixed top-1/2 right-3 z-30 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
+    <div
+      ref={scroller}
+      tabIndex={0}
+      aria-label="Story"
+      className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto focus-visible:outline-none"
+    >
+      <ol aria-label="Beats" className="fixed top-1/2 right-3 z-30 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
         {BEATS.map((name, index) => (
           <li key={name}>
             <button
@@ -144,32 +149,34 @@ export function Landing() {
         </div>
       </section>
 
-      <section className="grid h-full snap-start content-center gap-8 px-5 sm:px-10 lg:grid-cols-2 lg:items-end">
-        <div>
-        <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">5% of the data · seed 2026</p>
-        <CountUp />
-        <p className="mt-3 max-w-xl text-xl text-foreground/85 sm:text-2xl">
-          6.1× lower error at 5% data — seed 2026
-        </p>
-        <p className="mt-2 font-num text-sm text-muted-foreground">3-seed mean ≈ 3.2×</p>
-        </div>
-        <div className="flex items-end gap-8 lg:justify-end">
-          <figure>
-            <div className="h-44 w-14 rounded-t-[4px] bg-nn" />
-            <figcaption className="mt-3 font-num text-xs leading-snug text-nn">
-              Standard NN
-              <br />
-              50.05 MSE
-            </figcaption>
-          </figure>
-          <figure>
-            <div className="h-7 w-14 rounded-t-[4px] bg-pinn" />
-            <figcaption className="mt-3 font-num text-xs leading-snug text-pinn">
-              PINN
-              <br />
-              8.23 MSE
-            </figcaption>
-          </figure>
+      <section className="flex h-full snap-start items-center justify-center px-5 sm:px-10">
+        <div className="flex w-full max-w-4xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-[120px]">
+          <div className="max-w-xl">
+            <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">5% of the data · seed 2026</p>
+            <CountUp />
+            <p className="mt-3 text-balance text-xl text-foreground/85 sm:text-2xl">
+              6.1× lower error at 5% data — seed 2026
+            </p>
+            <p className="mt-2 font-num text-sm text-muted-foreground">3-seed mean ≈ 3.2×</p>
+          </div>
+          <div className="flex items-end gap-8">
+            <figure>
+              <div className="h-40 w-14 rounded-t-[4px] bg-nn lg:h-[220px]" />
+              <figcaption className="mt-3 font-num text-xs leading-snug text-nn">
+                Standard NN
+                <br />
+                50.05 MSE
+              </figcaption>
+            </figure>
+            <figure>
+              <div className="h-7 w-14 rounded-t-[4px] bg-pinn lg:h-9" />
+              <figcaption className="mt-3 font-num text-xs leading-snug text-pinn">
+                PINN
+                <br />
+                8.23 MSE
+              </figcaption>
+            </figure>
+          </div>
         </div>
       </section>
 
@@ -264,7 +271,11 @@ function CountUp() {
   }, [reduced]);
 
   return (
-    <p ref={ref} className="font-num text-[clamp(5.5rem,16vw,11rem)] leading-none tracking-[-0.08em] text-pinn">
+    <p
+      ref={ref}
+      aria-hidden={reduced ? undefined : true}
+      className="font-num text-[clamp(5.5rem,16vw,11rem)] leading-none tracking-[-0.08em] text-pinn"
+    >
       {value.toFixed(1)}×
     </p>
   );

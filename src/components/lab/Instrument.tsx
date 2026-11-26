@@ -1,6 +1,10 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { DATA_FRACTIONS } from "@/ml/constants";
+import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { SystemSelector } from "@/components/systems/SystemSelector";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 /** One hairline instrument: controls, the simulation, and live metrics. */
@@ -11,6 +15,7 @@ export function Instrument({
   stage,
   timeline,
   metrics,
+  dock,
 }: {
   title: string;
   active: string;
@@ -18,9 +23,11 @@ export function Instrument({
   stage: ReactNode;
   timeline: ReactNode;
   metrics: ReactNode;
+  /** Mobile bar: the live-train button and the clock, fixed to the viewport. */
+  dock?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 pt-4 pb-6 sm:px-6">
+    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 pt-4 pb-24 sm:px-6 lg:pb-6">
       <p className="font-num text-[11px] tracking-[0.18em] text-muted-foreground uppercase">Simulation lab</p>
       <div className="mt-1 flex items-end justify-between gap-4">
         <h1 className="text-[clamp(2.1rem,4.2vw,3.5rem)] leading-none font-medium tracking-[-0.055em] text-foreground">
@@ -32,8 +39,8 @@ export function Instrument({
       </div>
       <SystemSelector active={active} className="mt-4" />
       <div className="mt-3 overflow-hidden rounded-[10px] border border-hairline bg-panel">
-        <div className="grid lg:grid-cols-[230px_minmax(0,1fr)_210px]">
-          <aside className="order-2 border-b border-hairline px-4 py-4 lg:order-1 lg:border-r lg:border-b-0">
+        <div className="grid lg:grid-cols-[168px_minmax(0,1fr)_156px] xl:grid-cols-[220px_minmax(0,1fr)_200px]">
+          <aside className="order-3 border-b border-hairline px-4 py-4 lg:order-1 lg:border-r lg:border-b-0">
             <h2 className="text-[13px] font-medium text-foreground">Controls</h2>
             <div className="mt-4 grid gap-4">{controls}</div>
           </aside>
@@ -41,7 +48,7 @@ export function Instrument({
             <header className="flex h-10 items-center justify-between border-b border-hairline px-4">
               <h2 className="text-[13px] font-medium text-foreground">Simulation</h2>
             </header>
-            <div className="sim-grid relative min-h-[560px] flex-1 lg:min-h-[480px]">{stage}</div>
+            <div className="sim-grid relative min-h-[460px] flex-1 lg:min-h-[480px]">{stage}</div>
             <div className="flex h-12 items-center gap-3 border-t border-hairline px-3">
               <span className="font-num shrink-0 text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
                 Timeline
@@ -49,13 +56,48 @@ export function Instrument({
               {timeline}
             </div>
           </section>
-          <aside className="order-3 flex flex-col px-4 py-4">
+          <aside className="order-2 flex flex-col px-4 py-4 lg:order-3">
             <h2 className="text-[13px] font-medium text-foreground">Live metrics</h2>
             <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3">{metrics}</div>
           </aside>
         </div>
       </div>
+      {dock ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-hairline bg-panel px-3 py-2 lg:hidden">
+          {dock}
+        </div>
+      ) : null}
     </main>
+  );
+}
+
+export function ModelToggles({
+  shown,
+  onChange,
+}: {
+  shown: Record<SlotId, boolean>;
+  onChange: (id: SlotId, checked: boolean) => void;
+}) {
+  return (
+    <div>
+      <p className="font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Models</p>
+      <div className="mt-2 grid gap-2">
+        {SLOTS.map((slot) => (
+          <label key={slot.id} className="flex items-center justify-between gap-2 text-xs text-foreground">
+            <span className="flex items-center gap-2">
+              <span className="size-1.5 rounded-full" style={{ background: slot.color }} />
+              {slot.id === "physics" ? "Physics" : slot.label}
+            </span>
+            <Switch
+              size="sm"
+              checked={shown[slot.id]}
+              onCheckedChange={(checked) => onChange(slot.id, checked)}
+              aria-label={slot.label}
+            />
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -107,17 +149,22 @@ export function TrainButton({
   disabled,
   onClick,
   children = "Live train (~20 s)",
+  className,
 }: {
   disabled?: boolean;
   onClick: () => void;
   children?: ReactNode;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="mt-auto h-11 w-full rounded-full bg-pinn text-sm font-semibold text-[#14160c] disabled:opacity-40"
+      className={cn(
+        "mt-auto h-11 w-full rounded-full bg-pinn text-sm font-semibold text-[#14160c] disabled:opacity-40",
+        className,
+      )}
     >
       {children}
     </button>

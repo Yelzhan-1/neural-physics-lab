@@ -19,9 +19,8 @@ export function SystemSelector({ active, className }: { active?: string; classNa
 
   return (
     <>
-      <div
+      <nav
         className={cn("flex flex-wrap gap-x-5 gap-y-1 border-b border-hairline", className)}
-        role="list"
         aria-label="Physical systems"
       >
         {SYSTEMS.map((system) => {
@@ -50,7 +49,7 @@ export function SystemSelector({ active, className }: { active?: string; classNa
             </button>
           );
         })}
-      </div>
+      </nav>
       {pending && <ComingNext system={pending} onClose={() => setPending(null)} />}
     </>
   );

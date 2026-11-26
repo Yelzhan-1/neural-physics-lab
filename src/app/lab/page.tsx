@@ -20,7 +20,9 @@ export default function LabPage({
       <Suspense fallback={<main className="flex-1 px-8 py-16 text-sm text-muted-foreground">Loading the lab…</main>}>
         <LabGate searchParams={searchParams} />
       </Suspense>
-      <SiteFooter />
+      <div className="max-lg:pb-16">
+        <SiteFooter />
+      </div>
     </>
   );
 }

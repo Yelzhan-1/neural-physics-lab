@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_SPRING, type SpringParams } from "@/engine";
-import { SLOTS } from "@/components/scene/runtime";
+import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { ParamSlider } from "@/components/lab/ControlPanel";
-import { Instrument, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { FractionRow, Instrument, ModelToggles, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { laneFrames, NARROW_MQ, strokeLaneDividers } from "@/components/lab/lanes";
 import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
@@ -37,6 +38,8 @@ export function SpringLab() {
   const [params, setParams] = useState<SpringParams>({ ...DEFAULT_SPRING });
   const [release, setRelease] = useState(RELEASE);
   const [playing, setPlaying] = useState(true);
+  const [percent, setPercent] = useState(20);
+  const [shown, setShown] = useState<Record<SlotId, boolean>>({ physics: true, nn: true, pinn: true });
   const [status, setStatus] = useState("idle");
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,11 @@ export function SpringLab() {
   const [badge, setBadge] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
+  const dockTimeRef = useRef<HTMLSpanElement>(null);
+  const shownRef = useRef(shown);
+  useEffect(() => {
+    shownRef.current = shown;
+  }, [shown]);
   const clientRef = useRef<MlClient | null>(null);
   const cacheRef = useRef<CacheFile | null>(null);
   const paramsRef = useRef(params);
@@ -116,33 +124,23 @@ export function SpringLab() {
       const w = rect.width;
       const h = rect.height;
       context.clearRect(0, 0, w, h);
-      const stacked = w < 700;
-      context.strokeStyle = "rgba(237,230,218,0.10)";
-      context.lineWidth = 1;
-      context.beginPath();
-      if (stacked) {
-        context.moveTo(12, h / 3);
-        context.lineTo(w - 12, h / 3);
-        context.moveTo(12, (2 * h) / 3);
-        context.lineTo(w - 12, (2 * h) / 3);
-      } else {
-        context.moveTo(w / 3, 12);
-        context.lineTo(w / 3, h - 12);
-        context.moveTo((2 * w) / 3, 12);
-        context.lineTo((2 * w) / 3, h - 12);
-      }
-      context.stroke();
-      LANES.forEach((lane, index) => {
-        const left = stacked ? 0 : (w / 3) * index;
-        const top = stacked ? (h / 3) * index : 0;
-        const laneW = stacked ? w : w / 3;
-        const laneH = stacked ? h / 3 : h;
-        const mid = top + laneH * 0.46;
+      const stacked = window.matchMedia(NARROW_MQ).matches;
+      const lanes = LANES.map((lane, index) => ({ lane, index })).filter((item) => shownRef.current[SLOTS[item.index].id]);
+      const visible = lanes.length > 0 ? lanes : [{ lane: LANES[0], index: 0 }];
+      strokeLaneDividers(context, visible.length, w, h, stacked);
+      const frames = laneFrames(visible.length, w, h, stacked);
+      visible.forEach(({ lane, index }, order) => {
+        const frame = frames[order];
+        if (!frame) return;
+        const { left, top, width: laneW, height: laneH } = frame;
+        const mid = top + laneH * 0.5;
         const wall = left + 22;
         const rest = left + laneW * 0.42;
-        const scale = Math.min(100, laneW * 0.2);
         const x = runtime.states[index][0];
-        const massX = Math.min(left + laneW - 28, rest + x * scale);
+        const leftRoom = Math.max(12, rest - wall - 10);
+        const rightRoom = Math.max(12, left + laneW - 36 - rest);
+        const scale = Math.min(leftRoom / Math.max(0.2, -Math.min(0, x)), rightRoom / Math.max(0.2, Math.max(0, x)));
+        const massX = rest + x * scale;
         context.strokeStyle = "rgba(237,230,218,0.28)";
         context.lineWidth = 2;
         context.beginPath();
@@ -175,7 +173,9 @@ export function SpringLab() {
       last = now;
       runtime.tick(elapsed);
       draw();
-      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
+      const clock = runtime.time.toFixed(2);
+      if (timeRef.current) timeRef.current.textContent = clock;
+      if (dockTimeRef.current) dockTimeRef.current.textContent = clock;
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -241,7 +241,7 @@ export function SpringLab() {
     const nn: number[] = [];
     const pinn: number[] = [];
     void client
-      .trainSpring({ fraction: 0.2, lambda: 0.4, params: current, seed: SEED, steps: SPRING_LIVE_STEPS }, (update) => {
+      .trainSpring({ fraction: Math.min(1, Math.max(0.05, percent / 100)), lambda: 0.4, params: current, seed: SEED, steps: SPRING_LIVE_STEPS }, (update) => {
         const series = update.model === "nn" ? nn : pinn;
         series[update.step - 1] = update.dataLoss;
         if (update.step % 4 === 0 || update.step === update.steps) {
@@ -274,24 +274,53 @@ export function SpringLab() {
       });
   };
 
+  const usePretrained = () => {
+    const cache = cacheRef.current;
+    paramsRef.current = { ...DEFAULT_SPRING };
+    releaseRef.current = cache?.release ?? RELEASE;
+    setParams({ ...DEFAULT_SPRING });
+    setRelease(cache?.release ?? RELEASE);
+    if (cache) applyCache(cache);
+  };
+
   return (
     <Instrument
       title="Spring-mass"
       active="spring-mass"
       controls={
         <>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            The PINN residual is m x″ + c x′ + k x − A sin(ω t).
-          </p>
+          <ModelToggles
+            shown={shown}
+            onChange={(id, checked) => setShown((current) => ({ ...current, [id]: checked }))}
+          />
+          <FractionRow value={percent} onChange={setPercent} />
           <ParamSlider symbol="x" name="Release" unit="m" value={release} min={-1.2} max={1.2} step={0.01} digits={2} onChange={onRelease} />
           <ParamSlider symbol="k" name="Stiffness" unit="N/m" value={params.k} min={0.5} max={12} step={0.1} digits={1} onChange={(k) => onParams({ ...params, k })} />
           <ParamSlider symbol="c" name="Damping" unit="N·s/m" value={params.c} min={0} max={2} step={0.01} digits={2} onChange={(c) => onParams({ ...params, c })} />
           <ParamSlider symbol="m" name="Mass" unit="kg" value={params.m} min={0.2} max={5} step={0.1} digits={1} onChange={(m) => onParams({ ...params, m })} />
-          <div className="h-16">
-            <LossChart nn={nnLoss} pinn={pinnLoss} />
-          </div>
-          {note && <p className="text-xs text-muted-foreground">{note}</p>}
-          {error && <p className="text-xs text-red-300">{error}</p>}
+          <button
+            type="button"
+            disabled={status === "training"}
+            onClick={usePretrained}
+            className="h-8 rounded-[6px] border border-hairline px-3 text-left font-num text-[11px] tracking-[0.12em] text-foreground uppercase disabled:opacity-40"
+          >
+            Use pretrained
+          </button>
+          {(nnLoss.length > 0 || pinnLoss.length > 0) && (
+            <div className="h-16">
+              <LossChart nn={nnLoss} pinn={pinnLoss} />
+            </div>
+          )}
+          <details className="border-t border-hairline pt-3">
+            <summary className="cursor-pointer font-num text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+              More
+            </summary>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              The PINN residual is m x″ + c x′ + k x − A sin(ω t).
+            </p>
+            {note && <p className="mt-2 text-xs text-muted-foreground">{note}</p>}
+            {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+          </details>
         </>
       }
       stage={
@@ -323,6 +352,8 @@ export function SpringLab() {
             aLabel="Position error"
             bLabel="Energy drift"
             formatB={driftText}
+            logB
+            smooth
             sample={() => {
               const origin = runtime.states[0][0];
               const energy = runtime.energy(0);
@@ -332,15 +363,25 @@ export function SpringLab() {
                 runtime.active[slot] && Math.abs(energy) > 1e-9
                   ? Math.abs(runtime.energy(slot) - energy) / Math.abs(energy)
                   : Number.NaN;
-              return { aNn: miss(1), aPinn: miss(2), bNn: drift(1), bPinn: drift(2) };
+              return { t: runtime.time, aNn: miss(1), aPinn: miss(2), bNn: drift(1), bPinn: drift(2) };
             }}
           />
-          <TrainButton disabled={status === "training"} onClick={train}>
+          <TrainButton className="max-lg:hidden" disabled={status === "training"} onClick={train}>
             {status === "training" ? "Training…" : "Live train (~20 s)"}
           </TrainButton>
-          <p className="text-center font-num text-[11px] text-muted-foreground">
+          <p className="text-center font-num text-[10px] text-balance text-muted-foreground">
             {status === "training" ? progress || "Training…" : badge ?? "Ready to train"}
           </p>
+        </>
+      }
+      dock={
+        <>
+          <span className="font-num w-16 shrink-0 text-[11px] text-foreground">
+            <span ref={dockTimeRef}>0.00</span> s
+          </span>
+          <TrainButton className="mt-0" disabled={status === "training"} onClick={train}>
+            {status === "training" ? "Training…" : "Live train (~20 s)"}
+          </TrainButton>
         </>
       }
     />
