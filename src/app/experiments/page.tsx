@@ -11,7 +11,9 @@ export default function ExperimentsPage() {
   return (
     <>
       <SiteHeader current="results" />
-      <ExperimentCenter />
+      <main className="flex flex-1 flex-col">
+        <ExperimentCenter />
+      </main>
       <SiteFooter />
     </>
   );

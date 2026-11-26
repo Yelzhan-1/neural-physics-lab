@@ -45,7 +45,7 @@ const UNTRAINED_LEGEND = SLOTS.map((slot) => `${slot.label}  ·  not trained yet
 const DRAG_HINT = "Drag a bob to set the starting pose";
 const GRAB_RADIUS = 30;
 /** Below this canvas width the split layout stacks instead of using columns. */
-const STACK_BREAKPOINT = 560;
+const NARROW_MQ = "(max-width: 699px)";
 const CELL_STRIDE = 4;
 const LEAD_COLUMN_WEIGHT = 1.45;
 
@@ -119,6 +119,12 @@ export function PendulumScene({
     let width = 0;
     let height = 0;
     let dpr = 1;
+    const narrowQuery = window.matchMedia(NARROW_MQ);
+    let narrow = narrowQuery.matches;
+    const onNarrow = () => {
+      narrow = narrowQuery.matches;
+    };
+    narrowQuery.addEventListener("change", onNarrow);
     let visible = true;
     let hoverBob = 0;
     let heldBob = 0;
@@ -212,7 +218,7 @@ export function PendulumScene({
       ctx.clearRect(0, 0, width, height);
 
       const cellCount = overlay ? 1 : shown.length;
-      computeCells(cellCount, width < STACK_BREAKPOINT);
+      computeCells(cellCount, narrow && cellCount === 3);
 
       if (!overlay) {
         ctx.strokeStyle = "rgba(148, 163, 184, 0.1)";
@@ -319,6 +325,7 @@ export function PendulumScene({
     };
 
     const unsubscribe = runtime.onFrame(draw);
+    const stopNarrow = () => narrowQuery.removeEventListener("change", onNarrow);
 
     /** Returns 1 or 2 for the bob under the pointer, 0 for none. */
     const hitTest = (clientX: number, clientY: number): number => {
@@ -403,6 +410,7 @@ export function PendulumScene({
     canvas.addEventListener("touchstart", onTouchStart, { passive: false });
 
     return () => {
+      stopNarrow();
       unsubscribe();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();

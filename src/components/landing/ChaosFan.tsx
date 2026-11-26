@@ -9,11 +9,11 @@ const BASE = 2.2;
 
 function color(index: number): string {
   const t = index / (COUNT - 1);
-  // Cyan, through amber, to violet. The fan is the three lab colours spreading apart.
+  // Bone, warming into coral as the paths separate.
   const stops = [
-    [34, 211, 238],
-    [245, 185, 66],
-    [179, 136, 255],
+    [237, 230, 218],
+    [237, 214, 190],
+    [255, 106, 61],
   ];
   const scaled = t * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(scaled));

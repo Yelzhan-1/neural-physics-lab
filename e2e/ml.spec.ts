@@ -106,6 +106,55 @@ test("demo mode shows NN and PINN rollouts within 3 seconds", async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test("landing beats move with the keyboard", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("heading", { name: "It copies the samples." })).toBeInViewport();
+  await page.keyboard.press("Home");
+  await expect(page.getByRole("heading", { name: "Learning from chaos." })).toBeInViewport();
+  expect(errors).toEqual([]);
+});
+
+test("pendulum more controls stay reachable", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/lab");
+  await expect(page.getByText("Demo pose")).toBeVisible();
+  await page.getByText("More", { exact: true }).click();
+  await expect(page.getByLabel("Chaos fan")).toBeVisible();
+  await page.getByRole("radio", { name: "Overlay" }).click();
+  await expect(page.getByTestId("pendulum-scene")).toBeVisible();
+  await page.getByRole("button", { name: "Jump to t = 3 s" }).click();
+  await page.getByText("Physics readout", { exact: true }).click();
+  await expect
+    .poll(async () => Number(await page.locator('[data-readout="16"]').textContent()), { timeout: 5_000 })
+    .toBeGreaterThan(2.5);
+  expect(errors).toEqual([]);
+});
+
+test("orbital use pretrained restores the reference launch", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/lab?system=orbital");
+  await expect(page.getByText(/Pretrained ·/)).toBeVisible();
+  const radius = page.getByRole("slider", { name: /Radius/ });
+  await radius.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.getByRole("button", { name: "Use pretrained" }).click();
+  await expect(radius).toHaveValue("1");
+  expect(errors).toEqual([]);
+});
+
+test("mobile dock keeps live train on screen", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/lab");
+  const button = page.getByRole("button", { name: "Live train (~20 s)" });
+  await expect(button).toBeVisible();
+  const box = await button.boundingBox();
+  expect(box?.y ?? 0).toBeGreaterThan(700);
+  expect(errors).toEqual([]);
+});
+
 test("qr page shows a code for the live site", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/qr");

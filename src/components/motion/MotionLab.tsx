@@ -13,9 +13,10 @@ import {
   type OrbitalParams,
   type ProjectileParams,
 } from "@/engine";
-import { SLOTS } from "@/components/scene/runtime";
+import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { ParamSlider } from "@/components/lab/ControlPanel";
-import { Instrument, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { FractionRow, Instrument, ModelToggles, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { laneFrames, NARROW_MQ, strokeLaneDividers } from "@/components/lab/lanes";
 import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
@@ -73,9 +74,16 @@ function MotionLab({ kind }: { kind: Kind }) {
   const [nnLoss, setNnLoss] = useState<number[]>([]);
   const [pinnLoss, setPinnLoss] = useState<number[]>([]);
   const [badge, setBadge] = useState<string | null>(null);
+  const [percent, setPercent] = useState(20);
+  const [shown, setShown] = useState<Record<SlotId, boolean>>({ physics: true, nn: true, pinn: true });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const metersRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
+  const dockTimeRef = useRef<HTMLSpanElement>(null);
+  const shownRef = useRef(shown);
+  useEffect(() => {
+    shownRef.current = shown;
+  }, [shown]);
   const referenceRef = useRef<number[]>(kind === "orbital" ? fullOrbit({ ...DEFAULT_ORBITAL }) : []);
   const clientRef = useRef<MlClient | null>(null);
   const cacheRef = useRef<CacheFile | null>(null);
@@ -173,38 +181,21 @@ function MotionLab({ kind }: { kind: Kind }) {
       const w = rect.width;
       const h = rect.height;
       context.clearRect(0, 0, w, h);
-      const stacked = w < 700;
-      context.strokeStyle = "rgba(237,230,218,0.10)";
-      context.lineWidth = 1;
-      context.beginPath();
-      if (stacked) {
-        context.moveTo(12, h / 3);
-        context.lineTo(w - 12, h / 3);
-        context.moveTo(12, (2 * h) / 3);
-        context.lineTo(w - 12, (2 * h) / 3);
-      } else {
-        context.moveTo(w / 3, 12);
-        context.lineTo(w / 3, h - 12);
-        context.moveTo((2 * w) / 3, 12);
-        context.lineTo((2 * w) / 3, h - 12);
-      }
-      context.stroke();
-      SLOTS.forEach((slot, index) => {
-        const left = stacked ? 8 : (w / 3) * index + 8;
-        const top = stacked ? (h / 3) * index + 6 : 10;
-        const laneW = (stacked ? w : w / 3) - 16;
-        const laneH = (stacked ? h / 3 : h) - 34;
-        context.save();
-        context.beginPath();
-        context.rect(left, top, laneW, laneH);
-        context.clip();
+      const stacked = window.matchMedia(NARROW_MQ).matches;
+      const lanes = SLOTS.filter((slot) => shownRef.current[slot.id]);
+      const visible = lanes.length > 0 ? lanes : [SLOTS[0]];
+      strokeLaneDividers(context, visible.length, w, h, stacked);
+      const frames = laneFrames(visible.length, w, h, stacked);
+      visible.forEach((slot, order) => {
+        const index = SLOTS.findIndex((item) => item.id === slot.id);
+        const frame = frames[order];
+        if (!frame) return;
         if (kind === "projectile") {
-          drawProjectile(context, runtime, index, slot.color, projectileRef.current, left, top, laneW, laneH);
+          drawProjectile(context, runtime, index, slot.color, projectileRef.current, frame.left, frame.top, frame.width, frame.height);
         } else {
-          drawOrbit(context, runtime, index, slot.color, referenceRef.current, left, top, laneW, laneH);
+          drawOrbit(context, runtime, index, slot.color, referenceRef.current, frame.left, frame.top, frame.width, frame.height);
         }
-        context.restore();
-        drawLaneLabel(context, slot.label, slot.color, left + laneW / 2, top + laneH + 14);
+        drawLaneLabel(context, slot.label, slot.color, frame.left + frame.width / 2, frame.top + frame.height + 14);
       });
     };
     const loop = (now: number) => {
@@ -212,7 +203,9 @@ function MotionLab({ kind }: { kind: Kind }) {
       last = now;
       runtime.tick(elapsed);
       draw();
-      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
+      const clock = runtime.time.toFixed(2);
+      if (timeRef.current) timeRef.current.textContent = clock;
+      if (dockTimeRef.current) dockTimeRef.current.textContent = clock;
       if (painted++ % 6 === 0) writeMeters(metersRef.current, runtime, kind, orbitalRef.current);
       frame = requestAnimationFrame(loop);
     };
@@ -261,7 +254,7 @@ function MotionLab({ kind }: { kind: Kind }) {
     const nn: number[] = [];
     const pinn: number[] = [];
     const request = {
-      fraction: 1,
+      fraction: Math.min(1, Math.max(0.05, percent / 100)),
       lambda: 0.4,
       seed: SEED,
       calibrate: true,
@@ -327,7 +320,11 @@ function MotionLab({ kind }: { kind: Kind }) {
       active={copy.active}
       controls={
         <>
-          <p className="text-xs leading-relaxed text-muted-foreground">{copy.residual}</p>
+          <ModelToggles
+            shown={shown}
+            onChange={(id, checked) => setShown((current) => ({ ...current, [id]: checked }))}
+          />
+          <FractionRow value={percent} onChange={setPercent} />
           {kind === "projectile" ? (
             <>
               <ParamSlider
@@ -423,15 +420,23 @@ function MotionLab({ kind }: { kind: Kind }) {
             type="button"
             disabled={status === "training"}
             onClick={usePretrained}
-            className="text-left font-num text-[11px] tracking-[0.12em] text-muted-foreground uppercase disabled:opacity-40"
+            className="h-8 rounded-[6px] border border-hairline px-3 text-left font-num text-[11px] tracking-[0.12em] text-foreground uppercase disabled:opacity-40"
           >
             Use pretrained
           </button>
-          <div className="h-16">
-            <LossChart nn={nnLoss} pinn={pinnLoss} />
-          </div>
-          {note && <p className="text-xs text-muted-foreground">{note}</p>}
-          {error && <p className="text-xs text-red-300">{error}</p>}
+          {(nnLoss.length > 0 || pinnLoss.length > 0) && (
+            <div className="h-16">
+              <LossChart nn={nnLoss} pinn={pinnLoss} />
+            </div>
+          )}
+          <details className="border-t border-hairline pt-3">
+            <summary className="cursor-pointer font-num text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+              More
+            </summary>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{copy.residual}</p>
+            {note && <p className="mt-2 text-xs text-muted-foreground">{note}</p>}
+            {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
+          </details>
         </>
       }
       stage={
@@ -463,6 +468,8 @@ function MotionLab({ kind }: { kind: Kind }) {
             aLabel="Position error"
             bLabel={kind === "orbital" ? "Energy drift" : "Speed error"}
             formatB={kind === "orbital" ? driftText : undefined}
+            logB={kind === "orbital"}
+            smooth
             sample={() => {
               const physics = runtime.states[0];
               const miss = (slot: number) => {
@@ -480,11 +487,19 @@ function MotionLab({ kind }: { kind: Kind }) {
                 }
                 return Math.abs(Math.hypot(state[2], state[3]) - Math.hypot(physics[2], physics[3]));
               };
-              return { aNn: miss(1), aPinn: miss(2), bNn: second(1), bPinn: second(2) };
+              return { t: runtime.time, aNn: miss(1), aPinn: miss(2), bNn: second(1), bPinn: second(2) };
             }}
           />
-          <TrainButton disabled={status === "training"} onClick={liveTrain} />
-          <p className="text-center font-num text-[11px] text-muted-foreground">{statusLine}</p>
+          <TrainButton className="max-lg:hidden" disabled={status === "training"} onClick={liveTrain} />
+          <p className="text-center font-num text-[10px] text-balance text-muted-foreground">{statusLine}</p>
+        </>
+      }
+      dock={
+        <>
+          <span className="font-num w-16 shrink-0 text-[11px] text-foreground">
+            <span ref={dockTimeRef}>0.00</span> s
+          </span>
+          <TrainButton className="mt-0" disabled={status === "training"} onClick={liveTrain} />
         </>
       }
     />
@@ -530,10 +545,17 @@ function drawProjectile(
   const radians = (params.angle * Math.PI) / 180;
   const apex = (params.speed * Math.sin(radians)) ** 2 / (2 * params.g);
   const range = (params.speed * params.speed * Math.sin(2 * radians)) / params.g;
-  const maxX = Math.max(2, range * 0.95);
-  const maxY = Math.max(1, apex * 1.05);
-  const ground = top + height - 10;
-  const scale = Math.min((width - 20) / (maxX + 0.4), (ground - top - 8) / (maxY + 0.2));
+  let maxX = Math.max(2, range);
+  let maxY = Math.max(1, apex);
+  for (let i = 0; i < trail.length; i += 2) {
+    maxX = Math.max(maxX, trail[i]);
+    maxY = Math.max(maxY, trail[i + 1]);
+  }
+  const stateAhead = runtime.states[slot];
+  maxX = Math.max(maxX, stateAhead[0]);
+  maxY = Math.max(maxY, stateAhead[1]);
+  const ground = top + height - 16;
+  const scale = Math.min((width - 28) / (maxX * 1.08), (ground - top - 12) / (maxY * 1.12));
   const originX = left + 12;
   context.strokeStyle = "rgba(237,230,218,0.22)";
   context.beginPath();
@@ -582,9 +604,12 @@ function drawOrbit(
   const trail = runtime.trail(slot);
   let reach = 0.4;
   for (let i = 0; i < reference.length; i += 2) reach = Math.max(reach, Math.hypot(reference[i], reference[i + 1]));
+  for (let i = 0; i < trail.length; i += 2) reach = Math.max(reach, Math.hypot(trail[i], trail[i + 1]));
+  const stateReach = runtime.states[slot];
+  reach = Math.max(reach, Math.hypot(stateReach[0], stateReach[1]));
   const cx = left + width * 0.5;
   const cy = top + height * 0.5;
-  const scale = (Math.min(width, height) * 0.44) / reach;
+  const scale = (Math.min(width, height) * 0.4) / (reach * 1.08);
   context.fillStyle = "#ede6da";
   context.beginPath();
   context.arc(cx, cy, 4.5, 0, Math.PI * 2);
