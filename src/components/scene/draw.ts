@@ -333,6 +333,7 @@ export function drawGhost(
   params: PendulumParams,
   color: string,
   seconds: number,
+  view: SceneView = "pendulum",
 ): void {
   const { pivotX, pivotY, scale, size } = place;
   const x1 = pivotX + params.l1 * Math.sin(theta1) * scale;
@@ -343,7 +344,47 @@ export function drawGhost(
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.setLineDash(DASH_GHOST);
+  ctx.globalAlpha = 0.5 + 0.18 * Math.sin(seconds * 1.6);
+  ctx.lineWidth = 1.5 * size;
+
+  if (view === "arm") {
+    const plateY = pivotY - 26 * size;
+    const plateHalf = 30 * size;
+    ctx.beginPath();
+    ctx.moveTo(pivotX - plateHalf, plateY);
+    ctx.lineTo(pivotX + plateHalf, plateY);
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    for (const joint of [
+      [pivotX, pivotY, 9 * size],
+      [x1, y1, 7.5 * size],
+      [x2, y2, 5 * size],
+    ] as const) {
+      ctx.beginPath();
+      ctx.arc(joint[0], joint[1], joint[2], 0, TAU);
+      ctx.stroke();
+    }
+    ctx.save();
+    ctx.translate(x2, y2);
+    ctx.rotate(Math.PI / 2 - theta2);
+    const reach = 17 * size;
+    const open = 8 * size;
+    ctx.beginPath();
+    ctx.moveTo(3 * size, -open);
+    ctx.lineTo(reach, -open);
+    ctx.lineTo(reach, -open * 0.45);
+    ctx.moveTo(3 * size, open);
+    ctx.lineTo(reach, open);
+    ctx.lineTo(reach, open * 0.45);
+    ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+    return;
+  }
 
   ctx.globalAlpha = 0.3;
   ctx.lineWidth = 1;

@@ -251,7 +251,16 @@ export function PendulumScene({
           drawTrail(ctx, runtime.trails[slot], place, color, settings.trailWidth * place.size);
           drawBody(ctx, settings.view, state[0], state[1], place, params, color, glows[slot]);
         } else if (!overlay) {
-          drawGhost(ctx, runtime.initial[0], runtime.initial[1], place, params, color, seconds);
+          drawGhost(
+            ctx,
+            runtime.initial[0],
+            runtime.initial[1],
+            place,
+            params,
+            color,
+            seconds,
+            settings.view,
+          );
           const cellX = cells[cell * CELL_STRIDE];
           const cellY = cells[cell * CELL_STRIDE + 1];
           const cellW = cells[cell * CELL_STRIDE + 2];

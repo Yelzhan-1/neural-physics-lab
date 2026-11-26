@@ -28,17 +28,20 @@ export function LogoMark({ className }: { className?: string }) {
 
 export function SiteHeader({ children }: { children?: ReactNode }) {
   return (
-    <header className="relative z-20 mx-auto flex w-full max-w-[1400px] items-center justify-between px-5 py-5 sm:px-8">
+    <header className="relative z-20 mx-auto flex w-full max-w-[1400px] items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-5">
       <Link
         href="/"
-        className="group flex items-center gap-2.5 text-[15px] font-semibold tracking-tight text-white"
+        className="group flex min-w-0 items-center gap-2 text-[13px] font-semibold tracking-tight whitespace-nowrap text-white sm:gap-2.5 sm:text-[15px]"
       >
-        <LogoMark className="size-7 transition-transform duration-500 group-hover:rotate-[-12deg]" />
+        <LogoMark className="size-7 shrink-0 transition-transform duration-500 group-hover:rotate-[-12deg]" />
         <span>
-          Neural Physics <span className="text-white/50">Lab</span>
+          <span className="sm:hidden">Neural Lab</span>
+          <span className="hidden sm:inline">
+            Neural Physics <span className="text-white/50">Lab</span>
+          </span>
         </span>
       </Link>
-      <nav className="flex items-center gap-2 text-sm">{children}</nav>
+      <nav className="flex shrink-0 items-center gap-1 text-sm sm:gap-2">{children}</nav>
     </header>
   );
 }
