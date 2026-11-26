@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { ENERGY_COLORS, EnergyChart } from "@/components/scene/EnergyChart";
 import type { LabRuntime } from "@/components/scene/runtime";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
 
 /** Text readouts refresh every this many frames (10 Hz at 60 fps). */
 const READOUT_INTERVAL = 6;
@@ -71,7 +70,7 @@ export function PhysicsPanel({ runtime }: { runtime: LabRuntime }) {
 
   return (
     <div ref={rootRef} className="@container">
-    <SpotlightCard className="grid gap-x-8 gap-y-6 p-5 sm:p-6 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <div className="grid gap-4">
       <section aria-label="Kinematics">
         <header className="mb-4 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold tracking-tight text-white">Physics panel</h2>
@@ -136,7 +135,7 @@ export function PhysicsPanel({ runtime }: { runtime: LabRuntime }) {
           </span>
         </p>
       </section>
-    </SpotlightCard>
+    </div>
     </div>
   );
 }

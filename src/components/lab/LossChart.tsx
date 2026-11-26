@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-const NN = "#f5b942";
-const PINN = "#b388ff";
+const NN = "#ff6a3d";
+const PINN = "#c8f04a";
 
-/** Data-loss curves. Amber is the standard NN, violet is the PINN. */
+/** Data-loss curves. Coral is the standard NN, lime is the PINN. */
 export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -26,7 +26,7 @@ export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {
     const bottom = height - 8;
     const left = 4;
     const right = width - 4;
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+    ctx.strokeStyle = "rgba(237, 230, 218, 0.12)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let line = 0; line <= 3; line++) {

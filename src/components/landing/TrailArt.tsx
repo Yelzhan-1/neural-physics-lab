@@ -6,9 +6,9 @@ import { DEMO_ROLLOUT_URL } from "@/ml/constants";
 
 type Point = { x: number; y: number; x1?: number; y1?: number };
 
-const PHYSICS = "#22d3ee";
-const NN = "#f5b942";
-const PINN = "#b388ff";
+const PHYSICS = "#ede6da";
+const NN = "#ff6a3d";
+const PINN = "#c8f04a";
 
 /** One luminous RK4 exposure, plus the committed NN and PINN rollouts of the demo pose. */
 export function TrailArt({
@@ -162,33 +162,32 @@ function drawChaos(
   const history = 280;
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.save();
-  context.globalCompositeOperation = "lighter";
-  for (let i = 1; i < paths.length; i++) {
-    stroke(context, paths[i], index - history, index, originX, originY, scale, "rgba(103,232,249,0.55)", 1.15);
+  for (let i = 0; i < paths.length; i++) {
+    if (i === Math.floor(paths.length / 2)) continue;
+    stroke(context, paths[i], index - history, index, originX, originY, scale, "rgba(237,230,218,0.28)", 1.05);
   }
   const main = paths[Math.floor(paths.length / 2)];
-  stroke(context, main, index - history, index, originX, originY, scale, "rgba(34,211,238,0.09)", 9);
-  stroke(context, main, index - history, index, originX, originY, scale, "rgba(103,232,249,0.7)", 1.35);
-  stroke(context, main, index - 28, index, originX, originY, scale, "#f3fdff", 1.5);
-  context.restore();
+  stroke(context, main, index - history, index, originX, originY, scale, "rgba(237,230,218,0.16)", 7);
+  stroke(context, main, index - history, index, originX, originY, scale, "rgba(237,230,218,0.9)", 1.35);
+  stroke(context, main, index - 36, index, originX, originY, scale, "#c8f04a", 1.7);
   const pose = main[Math.min(main.length - 1, Math.max(0, index))];
   if (!pose) return;
   const jointX = pose.x1 ?? pose.x * 0.5;
   const jointY = pose.y1 ?? pose.y * 0.5;
-  context.strokeStyle = "#e7eef6";
+  context.strokeStyle = "#ede6da";
   context.lineWidth = 2.2;
   context.beginPath();
   context.moveTo(originX, originY);
   context.lineTo(originX + jointX * scale, originY - jointY * scale);
   context.lineTo(originX + pose.x * scale, originY - pose.y * scale);
   context.stroke();
-  for (const [x, y, radius] of [
-    [0, 0, 4],
-    [jointX, jointY, 4.5],
-    [pose.x, pose.y, 6],
-  ] as const) {
-    context.fillStyle = "#f4fdff";
+  const joints = [
+    [0, 0, 4, "#ede6da"],
+    [jointX, jointY, 4.5, "#ede6da"],
+    [pose.x, pose.y, 6, "#c8f04a"],
+  ] as const;
+  for (const [x, y, radius, fill] of joints) {
+    context.fillStyle = fill;
     context.beginPath();
     context.arc(originX + x * scale, originY - y * scale, radius, 0, Math.PI * 2);
     context.fill();
@@ -232,7 +231,7 @@ function drawCompare(
   const color = mode === "nn" ? NN : PINN;
   context.lineCap = "round";
   context.lineJoin = "round";
-  stroke(context, physics, 0, index, originX, originY, scale, "rgba(34,211,238,0.85)", 1.6);
+  stroke(context, physics, 0, index, originX, originY, scale, "rgba(237,230,218,0.85)", 1.6);
   stroke(context, model, 0, index, originX, originY, scale, color, 2.1);
   const truth = physics[Math.min(physics.length - 1, index)];
   const guess = model[Math.min(model.length - 1, Math.max(0, index))];

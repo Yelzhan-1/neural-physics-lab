@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import type { PendulumParams } from "@/engine";
 import { Slider } from "@/components/ui/slider";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
 
 interface ParamSliderProps {
   symbol: ReactNode;
@@ -65,6 +64,8 @@ interface ControlPanelProps {
   theta2: number;
   onParamsChange: (params: PendulumParams) => void;
   onAnglesChange: (theta1: number, theta2: number) => void;
+  /** "primary" is angles and masses. "rest" is the lengths, gravity, and the Sandbox heading. */
+  part?: "all" | "primary" | "rest";
 }
 
 /** Sandbox controls: release angles in degrees and the physical parameters. */
@@ -74,20 +75,29 @@ export function ControlPanel({
   theta2,
   onParamsChange,
   onAnglesChange,
+  part = "all",
 }: ControlPanelProps) {
   const set = (key: keyof PendulumParams) => (value: number) =>
     onParamsChange({ ...params, [key]: value });
+  const pose = part === "all" || part === "primary";
+  const masses = part === "all" || part === "primary";
+  const rest = part === "all" || part === "rest";
 
   return (
-    <SpotlightCard className="p-5 sm:p-6">
-      <h2 className="text-sm font-semibold tracking-tight text-white">Sandbox</h2>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        Every change restarts the run from the release pose.
-      </p>
+    <div className="grid gap-4">
+      {rest && (
+        <div>
+          <h2 className="text-sm font-medium tracking-tight text-foreground">Sandbox</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Every change restarts the run from the release pose.
+          </p>
+        </div>
+      )}
 
-      <fieldset className="mt-5 grid gap-4">
-        <legend className="mb-3 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-          Release pose
+      {pose && (
+      <fieldset className="grid gap-4">
+        <legend className="mb-1 font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+          Initial angles
         </legend>
         <ParamSlider
           symbol={<>θ<Sub>1</Sub></>}
@@ -112,73 +122,84 @@ export function ControlPanel({
           onChange={(value) => onAnglesChange(theta1, value)}
         />
       </fieldset>
+      )}
 
-      <fieldset className="mt-6 grid gap-4">
-        <legend className="mb-3 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-          System
+      {(masses || rest) && (
+      <fieldset className="grid gap-4">
+        <legend className="mb-1 font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+          {masses && !rest ? "Masses" : "System"}
         </legend>
-        <div className="grid grid-cols-2 gap-x-5 gap-y-4 lg:grid-cols-1 xl:grid-cols-2">
-          <ParamSlider
-            symbol={<>m<Sub>1</Sub></>}
-            name="Mass"
-            ariaLabel="Mass of bob 1"
-            unit="kg"
-            value={params.m1}
-            min={0.2}
-            max={5}
-            step={0.1}
-            digits={1}
-            onChange={set("m1")}
-          />
-          <ParamSlider
-            symbol={<>m<Sub>2</Sub></>}
-            name="Mass"
-            ariaLabel="Mass of bob 2"
-            unit="kg"
-            value={params.m2}
-            min={0.2}
-            max={5}
-            step={0.1}
-            digits={1}
-            onChange={set("m2")}
-          />
-          <ParamSlider
-            symbol={<>l<Sub>1</Sub></>}
-            name="Length"
-            ariaLabel="Length of link 1"
-            unit="m"
-            value={params.l1}
-            min={0.3}
-            max={2}
-            step={0.05}
-            digits={2}
-            onChange={set("l1")}
-          />
-          <ParamSlider
-            symbol={<>l<Sub>2</Sub></>}
-            name="Length"
-            ariaLabel="Length of link 2"
-            unit="m"
-            value={params.l2}
-            min={0.3}
-            max={2}
-            step={0.05}
-            digits={2}
-            onChange={set("l2")}
-          />
+        <div className="grid gap-4">
+          {masses && (
+            <>
+              <ParamSlider
+                symbol={<>m<Sub>1</Sub></>}
+                name="Mass"
+                ariaLabel="Mass of bob 1"
+                unit="kg"
+                value={params.m1}
+                min={0.2}
+                max={5}
+                step={0.1}
+                digits={1}
+                onChange={set("m1")}
+              />
+              <ParamSlider
+                symbol={<>m<Sub>2</Sub></>}
+                name="Mass"
+                ariaLabel="Mass of bob 2"
+                unit="kg"
+                value={params.m2}
+                min={0.2}
+                max={5}
+                step={0.1}
+                digits={1}
+                onChange={set("m2")}
+              />
+            </>
+          )}
+          {rest && (
+            <>
+              <ParamSlider
+                symbol={<>l<Sub>1</Sub></>}
+                name="Length"
+                ariaLabel="Length of link 1"
+                unit="m"
+                value={params.l1}
+                min={0.3}
+                max={2}
+                step={0.05}
+                digits={2}
+                onChange={set("l1")}
+              />
+              <ParamSlider
+                symbol={<>l<Sub>2</Sub></>}
+                name="Length"
+                ariaLabel="Length of link 2"
+                unit="m"
+                value={params.l2}
+                min={0.3}
+                max={2}
+                step={0.05}
+                digits={2}
+                onChange={set("l2")}
+              />
+              <ParamSlider
+                symbol="g"
+                name="Gravity"
+                unit="m/s²"
+                value={params.g}
+                min={1}
+                max={25}
+                step={0.01}
+                digits={2}
+                onChange={set("g")}
+              />
+            </>
+          )}
         </div>
-        <ParamSlider
-          symbol="g"
-          name="Gravity"
-          unit="m/s²"
-          value={params.g}
-          min={1}
-          max={25}
-          step={0.01}
-          digits={2}
-          onChange={set("g")}
-        />
       </fieldset>
-    </SpotlightCard>
+      )}
+    </div>
   );
 }

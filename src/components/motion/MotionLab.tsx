@@ -14,10 +14,9 @@ import {
   type ProjectileParams,
 } from "@/engine";
 import { SLOTS } from "@/components/scene/runtime";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
-import { SystemSelector } from "@/components/systems/SystemSelector";
-import { Button } from "@/components/ui/button";
 import { ParamSlider } from "@/components/lab/ControlPanel";
+import { Instrument, PlayButton, TrainButton } from "@/components/lab/Instrument";
+import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
 import { LIVE_TRAIN_TARGET_MS, SEED } from "@/ml/constants";
@@ -76,6 +75,7 @@ function MotionLab({ kind }: { kind: Kind }) {
   const [badge, setBadge] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const metersRef = useRef<HTMLDivElement>(null);
+  const timeRef = useRef<HTMLSpanElement>(null);
   const referenceRef = useRef<number[]>(kind === "orbital" ? fullOrbit({ ...DEFAULT_ORBITAL }) : []);
   const clientRef = useRef<MlClient | null>(null);
   const cacheRef = useRef<CacheFile | null>(null);
@@ -173,14 +173,38 @@ function MotionLab({ kind }: { kind: Kind }) {
       const w = rect.width;
       const h = rect.height;
       context.clearRect(0, 0, w, h);
-      const laneH = h / 3;
+      const stacked = w < 700;
+      context.strokeStyle = "rgba(237,230,218,0.10)";
+      context.lineWidth = 1;
+      context.beginPath();
+      if (stacked) {
+        context.moveTo(12, h / 3);
+        context.lineTo(w - 12, h / 3);
+        context.moveTo(12, (2 * h) / 3);
+        context.lineTo(w - 12, (2 * h) / 3);
+      } else {
+        context.moveTo(w / 3, 12);
+        context.lineTo(w / 3, h - 12);
+        context.moveTo((2 * w) / 3, 12);
+        context.lineTo((2 * w) / 3, h - 12);
+      }
+      context.stroke();
       SLOTS.forEach((slot, index) => {
-        const top = index * laneH;
+        const left = stacked ? 8 : (w / 3) * index + 8;
+        const top = stacked ? (h / 3) * index + 6 : 10;
+        const laneW = (stacked ? w : w / 3) - 16;
+        const laneH = (stacked ? h / 3 : h) - 34;
+        context.save();
+        context.beginPath();
+        context.rect(left, top, laneW, laneH);
+        context.clip();
         if (kind === "projectile") {
-          drawProjectile(context, runtime, index, slot.color, projectileRef.current, 8, top + 4, w - 16, laneH - 8);
+          drawProjectile(context, runtime, index, slot.color, projectileRef.current, left, top, laneW, laneH);
         } else {
-          drawOrbit(context, runtime, index, slot.color, referenceRef.current, 8, top + 2, w - 16, laneH - 4);
+          drawOrbit(context, runtime, index, slot.color, referenceRef.current, left, top, laneW, laneH);
         }
+        context.restore();
+        drawLaneLabel(context, slot.label, slot.color, left + laneW / 2, top + laneH + 14);
       });
     };
     const loop = (now: number) => {
@@ -188,6 +212,7 @@ function MotionLab({ kind }: { kind: Kind }) {
       last = now;
       runtime.tick(elapsed);
       draw();
+      if (timeRef.current) timeRef.current.textContent = runtime.time.toFixed(2);
       if (painted++ % 6 === 0) writeMeters(metersRef.current, runtime, kind, orbitalRef.current);
       frame = requestAnimationFrame(loop);
     };
@@ -294,71 +319,15 @@ function MotionLab({ kind }: { kind: Kind }) {
         ? `Training… ${Math.max(0, Math.ceil(eta))} s left`
         : badge;
 
+  const statusLine = etaLabel ?? (status === "idle" ? "Ready to train" : status);
+
   return (
-    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-2 px-4 pb-10 sm:px-8">
-      <SystemSelector active={copy.active} />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="min-w-0">
-        <SpotlightCard className="overflow-hidden">
-          <div className="h-[520px]">
-            <canvas
-              ref={canvasRef}
-              data-testid={copy.testId}
-              className="block h-full w-full"
-              role="img"
-              aria-label={copy.label}
-            />
-          </div>
-          <div ref={metersRef} className="grid grid-cols-3 border-t border-white/10">
-            {SLOTS.map((slot, index) => (
-              <div key={slot.id} data-lane={index} className="min-w-0 px-3 py-2">
-                <p className="truncate text-[10px] tracking-[0.12em] uppercase" style={{ color: slot.color }}>
-                  {slot.label}
-                </p>
-                <p data-err className="font-num text-lg leading-tight text-white">
-                  —
-                </p>
-                {kind === "orbital" && (
-                  <p className="text-[10px] text-white/40">
-                    |ΔE|/|E0| <span data-drift className="font-num text-white/75">—</span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 border-t border-white/[0.07] px-4 py-3">
-            <Button size="sm" onClick={() => setPlaying((value) => !value)} className="w-[88px]">
-              {playing ? "Pause" : "Play"}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => runtime.reset()}>
-              Reset
-            </Button>
-            {etaLabel && <p className="ml-auto text-xs text-white/70">{etaLabel}</p>}
-          </div>
-        </SpotlightCard>
-      </div>
-      <div className="grid content-start gap-4 lg:sticky lg:top-4 lg:self-start">
-        <SpotlightCard className="p-5" tint="167 139 250">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold text-white">Train models</h2>
-            <p data-testid="train-status" className="font-num text-[11px] tracking-wide text-white/55 uppercase">
-              {status}
-            </p>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{copy.residual}</p>
-          <Button className="mt-4 h-12 w-full rounded-full font-semibold" disabled={status === "training"} onClick={liveTrain}>
-            Live train (~20 s)
-          </Button>
-          <Button className="mt-2 h-10 w-full" variant="outline" disabled={status === "training"} onClick={usePretrained}>
-            Use pretrained
-          </Button>
-          <div className="mt-3 h-24 overflow-hidden rounded-lg bg-black/25">
-            <LossChart nn={nnLoss} pinn={pinnLoss} />
-          </div>
-          {note && <p className="mt-3 text-xs text-white/70">{note}</p>}
-          {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
-        </SpotlightCard>
-        <SpotlightCard className="grid gap-4 p-5">
+    <Instrument
+      title={kind === "projectile" ? "Projectile with drag" : "Orbital motion"}
+      active={copy.active}
+      controls={
+        <>
+          <p className="text-xs leading-relaxed text-muted-foreground">{copy.residual}</p>
           {kind === "projectile" ? (
             <>
               <ParamSlider
@@ -450,11 +419,96 @@ function MotionLab({ kind }: { kind: Kind }) {
               />
             </>
           )}
-        </SpotlightCard>
-      </div>
-      </div>
-    </main>
+          <button
+            type="button"
+            disabled={status === "training"}
+            onClick={usePretrained}
+            className="text-left font-num text-[11px] tracking-[0.12em] text-muted-foreground uppercase disabled:opacity-40"
+          >
+            Use pretrained
+          </button>
+          <div className="h-16">
+            <LossChart nn={nnLoss} pinn={pinnLoss} />
+          </div>
+          {note && <p className="text-xs text-muted-foreground">{note}</p>}
+          {error && <p className="text-xs text-red-300">{error}</p>}
+        </>
+      }
+      stage={
+        <canvas
+          ref={canvasRef}
+          data-testid={copy.testId}
+          className="absolute inset-0 block h-full w-full"
+          role="img"
+          aria-label={copy.label}
+        />
+      }
+      timeline={
+        <>
+          <PlayButton playing={playing} onClick={() => setPlaying((value) => !value)} />
+          <button type="button" onClick={() => runtime.reset()} className="text-xs text-muted-foreground">
+            Reset
+          </button>
+          <span className="ml-auto font-num text-[11px] text-foreground">
+            <span ref={timeRef}>0.00</span> s
+          </span>
+        </>
+      }
+      metrics={
+        <>
+          <p data-testid="train-status" className="sr-only">
+            {status}
+          </p>
+          <LiveSparks
+            aLabel="Position error"
+            bLabel={kind === "orbital" ? "Energy drift" : "Speed error"}
+            formatB={kind === "orbital" ? driftText : undefined}
+            sample={() => {
+              const physics = runtime.states[0];
+              const miss = (slot: number) => {
+                if (!runtime.active[slot]) return Number.NaN;
+                const state = runtime.states[slot];
+                return Math.hypot(state[0] - physics[0], state[1] - physics[1]);
+              };
+              const second = (slot: number) => {
+                if (!runtime.active[slot]) return Number.NaN;
+                const state = runtime.states[slot];
+                if (kind === "orbital") {
+                  const initial = orbitalEnergy(runtime.release, orbitalRef.current).total;
+                  if (Math.abs(initial) < 1e-9) return Number.NaN;
+                  return Math.abs(orbitalEnergy(state, orbitalRef.current).total - initial) / Math.abs(initial);
+                }
+                return Math.abs(Math.hypot(state[2], state[3]) - Math.hypot(physics[2], physics[3]));
+              };
+              return { aNn: miss(1), aPinn: miss(2), bNn: second(1), bPinn: second(2) };
+            }}
+          />
+          <TrainButton disabled={status === "training"} onClick={liveTrain} />
+          <p className="text-center font-num text-[11px] text-muted-foreground">{statusLine}</p>
+        </>
+      }
+    />
   );
+}
+
+function drawLaneLabel(
+  context: CanvasRenderingContext2D,
+  label: string,
+  color: string,
+  x: number,
+  y: number,
+) {
+  context.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  const textWidth = context.measureText(label).width;
+  const start = x - (6 + 8 + textWidth) / 2;
+  context.fillStyle = color;
+  context.beginPath();
+  context.arc(start + 3, y, 3, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "rgba(237,230,218,0.82)";
+  context.fillText(label, start + 14, y);
 }
 
 function sameLaunch(a: number[], b: number[]): boolean {
@@ -476,16 +530,12 @@ function drawProjectile(
   const radians = (params.angle * Math.PI) / 180;
   const apex = (params.speed * Math.sin(radians)) ** 2 / (2 * params.g);
   const range = (params.speed * params.speed * Math.sin(2 * radians)) / params.g;
-  let maxX = Math.max(2, range * 0.95);
-  let maxY = Math.max(1, apex * 1.05);
-  for (let i = 0; i < trail.length; i += 2) {
-    maxX = Math.max(maxX, trail[i]);
-    maxY = Math.max(maxY, trail[i + 1]);
-  }
+  const maxX = Math.max(2, range * 0.95);
+  const maxY = Math.max(1, apex * 1.05);
   const ground = top + height - 10;
   const scale = Math.min((width - 20) / (maxX + 0.4), (ground - top - 8) / (maxY + 0.2));
   const originX = left + 12;
-  context.strokeStyle = "rgba(255,255,255,0.16)";
+  context.strokeStyle = "rgba(237,230,218,0.22)";
   context.beginPath();
   context.moveTo(left, ground);
   context.lineTo(left + width, ground);
@@ -532,15 +582,14 @@ function drawOrbit(
   const trail = runtime.trail(slot);
   let reach = 0.4;
   for (let i = 0; i < reference.length; i += 2) reach = Math.max(reach, Math.hypot(reference[i], reference[i + 1]));
-  for (let i = 0; i < trail.length; i += 2) reach = Math.max(reach, Math.hypot(trail[i], trail[i + 1]));
   const cx = left + width * 0.5;
   const cy = top + height * 0.5;
-  const scale = (Math.min(width, height) * 0.46) / reach;
-  context.fillStyle = "#fde68a";
+  const scale = (Math.min(width, height) * 0.44) / reach;
+  context.fillStyle = "#ede6da";
   context.beginPath();
   context.arc(cx, cy, 4.5, 0, Math.PI * 2);
   context.fill();
-  strokePolyline(context, reference, cx, cy, scale, "rgba(34,211,238,0.38)", 1.2);
+  strokePolyline(context, reference, cx, cy, scale, "rgba(237,230,218,0.35)", 1.2);
   context.strokeStyle = color;
   context.lineWidth = 1.8;
   context.beginPath();

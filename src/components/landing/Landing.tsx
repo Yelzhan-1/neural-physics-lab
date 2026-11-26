@@ -3,7 +3,6 @@
 import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChaosFan } from "@/components/landing/ChaosFan";
 import { TrailArt } from "@/components/landing/TrailArt";
 import { SYSTEMS } from "@/ml/systems";
 
@@ -74,7 +73,7 @@ export function Landing() {
   };
 
   return (
-    <div ref={scroller} className="h-svh snap-y snap-mandatory overflow-y-auto">
+    <div ref={scroller} className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto">
       <ol className="fixed top-1/2 right-3 z-30 hidden -translate-y-1/2 flex-col gap-2 sm:flex">
         {BEATS.map((name, index) => (
           <li key={name}>
@@ -83,27 +82,29 @@ export function Landing() {
               aria-label={name}
               aria-current={beat === index ? "true" : undefined}
               onClick={() => go(index)}
-              className={beat === index ? "block h-6 w-1.5 rounded-full bg-physics" : "block h-1.5 w-1.5 rounded-full bg-white/30"}
+              className={beat === index ? "block h-6 w-1.5 rounded-full bg-foreground" : "block h-1.5 w-1.5 rounded-full bg-foreground/30"}
             />
           </li>
         ))}
       </ol>
 
-      <section className="flex h-svh snap-start flex-col px-5 pt-20 sm:px-10">
-        <div className="grid min-h-0 flex-1 items-end gap-6 pb-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
-          <div className="max-w-xl pb-2">
-            <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">Double pendulum</p>
-            <h1 className="mt-3 text-[clamp(3.4rem,8vw,7.4rem)] leading-[0.9] font-medium tracking-[-0.07em] text-white">
+      <section className="grid h-full snap-start grid-rows-[minmax(0,1fr)_auto] px-5 py-6 sm:px-10">
+        <div className="grid min-h-0 items-end gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="order-2 max-w-xl lg:order-1">
+            <h1 className="text-[clamp(3.2rem,7vw,6.4rem)] leading-[0.9] font-medium tracking-[-0.065em] text-foreground">
               Learning
               <br />
               from chaos.
             </h1>
-            <p className="mt-5 max-w-sm text-base text-white/70">A small change in the start becomes another path.</p>
-            <div className="mt-6 h-40 max-w-md overflow-hidden">
-              <ChaosFan compact />
-            </div>
+            <p className="mt-4 max-w-sm text-base text-foreground/80">AI that learns from the laws of nature.</p>
+            <Link
+              href="/lab"
+              className="mt-6 inline-flex h-11 items-center rounded-full bg-pinn px-6 text-sm font-semibold text-[#14160c]"
+            >
+              Enter the Lab
+            </Link>
           </div>
-          <div className="h-[42svh] min-h-56 lg:h-[70svh]">
+          <div className="order-1 h-[46%] min-h-56 w-full lg:order-2 lg:h-full">
             <TrailArt
               mode="chaos"
               testId="pendulum-scene"
@@ -111,93 +112,116 @@ export function Landing() {
             />
           </div>
         </div>
+        <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3 font-num text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+          <span>Double pendulum</span>
+          <span>RK4 trajectory</span>
+        </div>
       </section>
 
-      <section className="grid h-svh snap-start items-end gap-4 px-5 pt-20 pb-10 lg:grid-cols-2 lg:items-center sm:px-10">
-        <div className="h-[46svh] lg:h-[68svh]">
+      <section className="grid h-full snap-start items-end gap-6 px-5 py-8 lg:grid-cols-2 lg:items-center sm:px-10">
+        <div className="h-[42svh] min-h-56 lg:h-[58svh]">
           <TrailArt mode="nn" label="Standard network rollout leaving the RK4 trail" />
         </div>
-        <div className="max-w-md lg:justify-self-end">
-          <p className="font-num text-[11px] tracking-[0.18em] text-nn uppercase">Standard NN</p>
-          <h2 className="mt-3 text-[clamp(2.4rem,5vw,4.6rem)] leading-[0.95] font-medium tracking-[-0.06em] text-white">
+        <div className="max-w-lg lg:justify-self-end">
+          <p className="font-num text-[11px] tracking-[0.16em] text-nn uppercase">Standard NN</p>
+          <h2 className="mt-3 text-[clamp(2.6rem,5.4vw,4.8rem)] leading-[0.94] font-medium tracking-[-0.06em] text-foreground">
             It copies the samples.
           </h2>
-          <p className="mt-4 text-base text-white/70">Then the path leaves the physics.</p>
+          <p className="mt-4 max-w-sm text-lg text-foreground/75">Then the path leaves the physics.</p>
         </div>
       </section>
 
-      <section className="grid h-svh snap-start items-end gap-4 px-5 pt-20 pb-10 lg:grid-cols-2 lg:items-center sm:px-10">
-        <div className="order-2 max-w-md">
-          <p className="font-num text-[11px] tracking-[0.18em] text-pinn uppercase">PINN</p>
-          <h2 className="mt-3 text-[clamp(2.4rem,5vw,4.6rem)] leading-[0.95] font-medium tracking-[-0.06em] text-white">
-            The equations stay in the loss.
+      <section className="grid h-full snap-start items-end gap-6 px-5 py-8 lg:grid-cols-2 lg:items-center sm:px-10">
+        <div className="order-2 max-w-lg">
+          <p className="font-num text-[11px] tracking-[0.16em] text-pinn uppercase">PINN</p>
+          <h2 className="mt-3 text-[clamp(2.6rem,5.4vw,4.8rem)] leading-[0.94] font-medium tracking-[-0.06em] text-foreground">
+            The laws stay in the loss.
           </h2>
-          <p className="mt-4 text-base text-white/70">Same data. The laws are part of the grade.</p>
+          <p className="mt-4 max-w-sm text-lg text-foreground/75">Same data. The equations are part of the grade.</p>
         </div>
-        <div className="order-1 h-[46svh] lg:order-2 lg:h-[68svh]">
+        <div className="order-1 h-[42svh] min-h-56 lg:order-2 lg:h-[58svh]">
           <TrailArt mode="pinn" label="PINN rollout staying nearer the RK4 trail" />
         </div>
       </section>
 
-      <section className="flex h-svh snap-start flex-col justify-center px-5 sm:px-10">
-        <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">5% of the data</p>
+      <section className="grid h-full snap-start content-center gap-8 px-5 sm:px-10 lg:grid-cols-2 lg:items-end">
+        <div>
+        <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">5% of the data · seed 2026</p>
         <CountUp />
-        <p className="mt-4 max-w-xl text-lg text-white/80 sm:text-2xl">
+        <p className="mt-3 max-w-xl text-xl text-foreground/85 sm:text-2xl">
           6.1× lower error at 5% data — seed 2026
         </p>
-        <p className="mt-2 font-num text-sm text-white/50">3-seed mean ≈ 3.2×</p>
-        <div className="mt-8 flex h-24 max-w-xs items-end gap-3" aria-hidden>
-          <span className="w-10 rounded-t bg-nn" style={{ height: "100%" }} />
-          <span className="w-10 rounded-t bg-pinn" style={{ height: "16%" }} />
+        <p className="mt-2 font-num text-sm text-muted-foreground">3-seed mean ≈ 3.2×</p>
+        </div>
+        <div className="flex items-end gap-8 lg:justify-end">
+          <figure>
+            <div className="h-44 w-14 rounded-t-[4px] bg-nn" />
+            <figcaption className="mt-3 font-num text-xs leading-snug text-nn">
+              Standard NN
+              <br />
+              50.05 MSE
+            </figcaption>
+          </figure>
+          <figure>
+            <div className="h-7 w-14 rounded-t-[4px] bg-pinn" />
+            <figcaption className="mt-3 font-num text-xs leading-snug text-pinn">
+              PINN
+              <br />
+              8.23 MSE
+            </figcaption>
+          </figure>
         </div>
       </section>
 
-      <section className="flex h-svh snap-start flex-col justify-center px-5 sm:px-10">
-        <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">The lab</p>
-        <h2 className="mt-3 text-[clamp(2.6rem,6vw,5rem)] leading-none font-medium tracking-[-0.06em] text-white">
+      <section className="flex h-full snap-start flex-col justify-center px-5 sm:px-10">
+        <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">The lab</p>
+        <h2 className="mt-3 text-[clamp(2.8rem,6vw,5.2rem)] leading-none font-medium tracking-[-0.06em] text-foreground">
           Four systems.
         </h2>
-        <ul className="mt-8 max-w-xl">
+        <ul className="mt-8 max-w-xl border-b border-hairline">
           {SYSTEMS.map((system) => (
-            <li key={system.id} className="border-t border-white/10">
+            <li key={system.id} className="border-t border-hairline">
               <Link
                 href={HREF[system.id] ?? "/lab"}
-                className="flex items-baseline justify-between gap-4 py-3 text-xl tracking-tight text-white hover:text-physics sm:text-2xl"
+                className="flex items-baseline justify-between gap-4 py-3 text-xl tracking-tight text-foreground hover:text-pinn sm:text-2xl"
               >
                 <span>{system.name}</span>
-                <span className="font-num text-xs text-white/35">{system.code}</span>
+                <span className="font-num text-xs text-muted-foreground">{system.code}</span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="grid h-svh snap-start content-center gap-10 px-5 sm:px-10 lg:grid-cols-2 lg:items-center">
+      <section className="grid h-full snap-start content-center gap-10 px-5 sm:px-10 lg:grid-cols-2 lg:items-center">
         <div>
-          <h2 className="text-[clamp(3rem,7vw,6.2rem)] leading-[0.92] font-medium tracking-[-0.07em] text-white">
+          <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">Neural Physics Lab</p>
+          <h2 className="mt-3 text-[clamp(3rem,7vw,6rem)] leading-[0.92] font-medium tracking-[-0.07em] text-foreground">
             Keep
             <br />
             exploring.
           </h2>
           <Link
             href="/lab"
-            className="mt-8 inline-flex h-12 items-center rounded-full bg-physics px-7 text-sm font-semibold text-[#041018]"
+            className="mt-8 inline-flex h-11 items-center rounded-full bg-pinn px-6 text-sm font-semibold text-[#14160c]"
           >
             Enter the Lab
           </Link>
         </div>
-        <figure className="w-full max-w-sm justify-self-start rounded-3xl bg-[#d7f6ff] p-6 text-[#041820] lg:justify-self-end">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/qr.svg"
-            alt="QR code for https://neural-physics-lab-roan.vercel.app"
-            width={320}
-            height={320}
-            className="w-full"
-          />
-          <figcaption className="mt-3 flex justify-between font-num text-[10px] tracking-[0.14em] uppercase">
+        <figure className="w-full max-w-sm justify-self-start rounded-[22px] bg-[#EDE6DA] p-4 text-[#14160c] lg:justify-self-end">
+          <div className="bg-white p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/qr.svg"
+              alt="QR code for https://neural-physics-lab-roan.vercel.app"
+              width={320}
+              height={320}
+              className="w-full"
+            />
+          </div>
+          <figcaption className="mt-3 flex justify-between px-1 font-num text-[10px] tracking-[0.14em] uppercase">
             <span>Scan to open</span>
-            <span>The lab</span>
+            <span>Neural Physics Lab</span>
           </figcaption>
         </figure>
       </section>
@@ -230,7 +254,7 @@ function CountUp() {
         frame = requestAnimationFrame(tick);
         observer.disconnect();
       },
-      { threshold: 0.6 },
+      { threshold: 0.4 },
     );
     observer.observe(node);
     return () => {
@@ -240,7 +264,7 @@ function CountUp() {
   }, [reduced]);
 
   return (
-    <p ref={ref} className="font-num text-[clamp(6rem,18vw,13rem)] leading-none tracking-[-0.08em] text-physics">
+    <p ref={ref} className="font-num text-[clamp(5.5rem,16vw,11rem)] leading-none tracking-[-0.08em] text-pinn">
       {value.toFixed(1)}×
     </p>
   );

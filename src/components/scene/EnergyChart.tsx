@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 import { EnergyHistory, HISTORY_STRIDE, type LabRuntime } from "./runtime";
 
 export const ENERGY_COLORS = {
-  kinetic: "#5eead4",
-  potential: "#f472b6",
-  total: "#f8fafc",
+  kinetic: "#ff6a3d",
+  potential: "#c8f04a",
+  total: "#ede6da",
 } as const;
 
 const SERIES_COLORS = [ENERGY_COLORS.kinetic, ENERGY_COLORS.potential, ENERGY_COLORS.total];

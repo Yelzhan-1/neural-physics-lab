@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ExperimentCenter } from "@/components/experiments/ExperimentCenter";
-import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter, SiteHeader } from "@/components/site/SiteHeader";
 
 export const metadata: Metadata = {
   title: "Results · Neural Physics Lab",
@@ -12,6 +12,7 @@ export default function ExperimentsPage() {
     <>
       <SiteHeader current="results" />
       <ExperimentCenter />
+      <SiteFooter />
     </>
   );
 }

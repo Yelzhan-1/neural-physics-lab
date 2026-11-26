@@ -2,11 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { energy } from "@/engine";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { SLOTS, type LabRuntime } from "@/components/scene/runtime";
 
 const COLORS = [SLOTS[0].color, SLOTS[1].color, SLOTS[2].color];
-const NAMES = ["Physics", "Standard NN", "PINN"];
 
 function tip(state: ArrayLike<number>, l1: number, l2: number): { x: number; y: number } {
   return {
@@ -149,59 +147,46 @@ export function ModelPanel({ runtime, slotsReady = false }: { runtime: LabRuntim
   }, [runtime]);
 
   return (
-    <div ref={rootRef}>
-      <SpotlightCard className="p-5 sm:p-6">
-        <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold tracking-tight text-white">Versus RK4</h2>
-          <p className="text-xs text-white/45">Tip error · |ΔE|/|E0|</p>
-        </header>
-        <div className="grid gap-3 sm:grid-cols-2">
+    <div ref={rootRef} className="grid gap-3">
+      <div>
+        <p className="font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Tip error</p>
+        <div className="mt-1 grid gap-1">
           {[1, 2].map((slot) => (
-            <div
+            <p
               key={slot}
               data-testid={slot === 1 ? "slot-nn" : "slot-pinn"}
               data-active={slotsReady ? "true" : "false"}
-              className="rounded-lg bg-white/[0.035] px-3 py-2.5"
+              className="flex items-baseline justify-between font-num text-[12px]"
+              style={{ color: COLORS[slot] }}
             >
-              <p className="flex items-center gap-2 text-xs text-white/80">
-                <span className="size-1.5 rounded-full" style={{ background: COLORS[slot] }} />
-                {NAMES[slot]}
-              </p>
-              <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <dt className="text-muted-foreground">Tip error</dt>
-                  <dd data-model={(slot - 1) * 2} className="font-num mt-1 text-2xl tracking-tight text-white">
-                    —
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">|ΔE|/|E0|</dt>
-                  <dd data-model={(slot - 1) * 2 + 1} className="font-num mt-1 text-2xl tracking-tight text-white">
-                    —
-                  </dd>
-                </div>
-              </dl>
-            </div>
+              <span>{slot === 1 ? "NN" : "PINN"}</span>
+              <span data-model={(slot - 1) * 2}>—</span>
+            </p>
           ))}
         </div>
-        <div className="mt-3 h-28 overflow-hidden rounded-lg bg-black/25 ring-1 ring-white/5">
-          <canvas
-            ref={canvasRef}
-            role="img"
-            aria-label="Total energy of the physics solver, the standard NN and the PINN"
-            data-testid="model-energy-chart"
-            className="block h-full w-full"
-          />
-        </div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-          {NAMES.map((name, index) => (
-            <span key={name} className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3 rounded-full" style={{ background: COLORS[index] }} />
-              {name}
-            </span>
+      </div>
+      <div>
+        <p className="font-num text-[10px] tracking-[0.14em] text-muted-foreground uppercase">Energy drift</p>
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label="Total energy of the physics solver, the standard NN and the PINN"
+          data-testid="model-energy-chart"
+          className="mt-1 block h-16 w-full"
+        />
+        <div className="mt-1 grid gap-1">
+          {[1, 2].map((slot) => (
+            <p
+              key={slot}
+              className="flex items-baseline justify-between font-num text-[12px]"
+              style={{ color: COLORS[slot] }}
+            >
+              <span>{slot === 1 ? "NN" : "PINN"}</span>
+              <span data-model={(slot - 1) * 2 + 1}>—</span>
+            </p>
           ))}
         </div>
-      </SpotlightCard>
+      </div>
     </div>
   );
 }

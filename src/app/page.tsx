@@ -1,11 +1,12 @@
 import { Landing } from "@/components/landing/Landing";
-import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter, SiteHeader } from "@/components/site/SiteHeader";
 
 export default function HomePage() {
   return (
-    <div className="h-svh overflow-hidden">
-      <SiteHeader current="overview" overlay />
+    <div className="flex h-svh flex-col overflow-hidden">
+      <SiteHeader current="overview" />
       <Landing />
+      <SiteFooter />
     </div>
   );
 }

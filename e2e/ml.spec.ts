@@ -18,7 +18,7 @@ test("landing describes the four experiments and the trainable models", async ({
   for (const name of ["Double pendulum", "Spring-mass", "Projectile with drag", "Orbital motion"]) {
     await expect(page.getByRole("link", { name })).toBeVisible();
   }
-  await expect(page.getByRole("link", { name: "Enter the Lab" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Enter the Lab" }).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -26,6 +26,7 @@ test("lab physics starts immediately and training does not freeze it", async ({ 
   const errors = collectErrors(page);
   await page.goto("/lab");
   await expect(page.getByRole("button", { name: "Live train (~20 s)" })).toBeVisible();
+  await page.getByText("More", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Use pretrained" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Spring-mass" })).toBeEnabled();
 
@@ -52,7 +53,7 @@ test("spring system switches into a working lab", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Spring-mass" })).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("slider", { name: /Stiffness/ })).toBeVisible();
   await expect(page.getByTestId("spring-scene")).toBeVisible();
-  await page.getByRole("button", { name: "Train models" }).click();
+  await page.getByRole("button", { name: "Live train (~20 s)" }).click();
   await expect(page.getByTestId("train-status")).toHaveText("training", { timeout: 20_000 });
   expect(errors).toEqual([]);
 });
@@ -85,6 +86,7 @@ test("challenge mode can reveal a winner", async ({ page }) => {
   test.setTimeout(90_000);
   const errors = collectErrors(page);
   await page.goto("/lab");
+  await page.getByText("More", { exact: true }).click();
   const guess = page.getByRole("button", { name: "PINN will be closer" });
   if (!(await guess.isVisible())) {
     await page.getByTestId("train-panel").getByRole("button", { name: "Quick train (≤5 s)" }).click();

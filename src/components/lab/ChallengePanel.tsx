@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PendulumParams } from "@/engine";
 import type { LabRuntime } from "@/components/scene/runtime";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { Button } from "@/components/ui/button";
 import type { LabModels } from "./useLabModels";
 
@@ -102,8 +101,8 @@ export function ChallengePanel({
   };
 
   return (
-    <SpotlightCard className="p-5" tint="251 146 60">
-      <h2 className="text-sm font-semibold tracking-tight text-white">Challenge the AI</h2>
+    <div className="grid gap-2 border-t border-hairline pt-3">
+      <h2 className="text-sm font-medium tracking-tight text-foreground">Challenge the AI</h2>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Set a pose, pick a model, and see who is closer to the physics tip at t = 3 s.
       </p>
@@ -143,9 +142,9 @@ export function ChallengePanel({
           <p className="mt-1 text-white">{reveal.verdict}</p>
         </div>
       )}
-      <p className="mt-3 font-num text-[11px] tracking-wide text-white/50 uppercase">
+      <p className="font-num text-[11px] tracking-wide text-muted-foreground uppercase">
         Score {score.correct}/{score.total}
       </p>
-    </SpotlightCard>
+    </div>
   );
 }

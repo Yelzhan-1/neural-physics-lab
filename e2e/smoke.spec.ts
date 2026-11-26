@@ -42,6 +42,7 @@ test("lab renders the scene, the controls and a moving simulation", async ({ pag
   const scene = page.getByTestId("pendulum-scene");
   await expect(scene).toBeVisible();
   await expect.poll(() => paintedPixels(page, "pendulum-scene")).toBeGreaterThan(500);
+  await page.getByText("More", { exact: true }).click();
   await page.getByText("Physics readout", { exact: true }).click();
   await expect(page.getByTestId("energy-chart")).toBeVisible();
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
