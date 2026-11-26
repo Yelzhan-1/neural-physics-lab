@@ -36,12 +36,105 @@ async function pretrainSpring(): Promise<void> {
   void SEED;
 }
 
+async function rewriteDemoRollout(): Promise<void> {
+  const tf = await import("@tensorflow/tfjs");
+  const { DEMO_THETA1, DEMO_THETA2, MODEL_DT, PRETRAIN_STEPS, ROLLOUT_SECONDS } = await import("../src/ml/constants");
+  const { rolloutModel } = await import("../src/ml/predict");
+  const root = path.resolve("public/models/double-pendulum");
+  const nn = await tf.loadLayersModel(`file://${path.join(root, "nn", "model.json")}`);
+  const pinn = await tf.loadLayersModel(`file://${path.join(root, "pinn", "model.json")}`);
+  const steps = Math.round(ROLLOUT_SECONDS / MODEL_DT);
+  const initial = [(DEMO_THETA1 * Math.PI) / 180, (DEMO_THETA2 * Math.PI) / 180, 0, 0];
+  const nnRoll = rolloutModel(nn, initial, steps, MODEL_DT);
+  const pinnRoll = rolloutModel(pinn, initial, steps, MODEL_DT);
+  await writeFile(
+    path.join(root, "demo-rollout.json"),
+    `${JSON.stringify({
+      dt: MODEL_DT,
+      theta1: DEMO_THETA1,
+      theta2: DEMO_THETA2,
+      stepsTrained: PRETRAIN_STEPS,
+      seconds: ROLLOUT_SECONDS,
+      nn: Array.from(nnRoll),
+      pinn: Array.from(pinnRoll),
+    })}\n`,
+  );
+  nn.dispose();
+  pinn.dispose();
+  console.log(`rewrote demo rollout for ${DEMO_THETA1}°, ${DEMO_THETA2}°`);
+}
+
+async function pretrainProjectile(): Promise<void> {
+  const { DEFAULT_PROJECTILE, projectileLaunch } = await import("../src/engine");
+  const { MODEL_DT } = await import("../src/ml/constants");
+  const { fitProjectile, rolloutProjectile, PROJECTILE_PRETRAIN_STEPS } = await import("../src/ml/projectile");
+  console.log(`projectile pretrain ${PROJECTILE_PRETRAIN_STEPS} steps`);
+  const fitted = await fitProjectile(PROJECTILE_PRETRAIN_STEPS, { ...DEFAULT_PROJECTILE }, 1);
+  const root = path.resolve("public/models/projectile");
+  await mkdir(path.join(root, "nn"), { recursive: true });
+  await mkdir(path.join(root, "pinn"), { recursive: true });
+  await fitted.nn.save(`file://${path.join(root, "nn")}`);
+  await fitted.pinn.save(`file://${path.join(root, "pinn")}`);
+  const launch = Array.from(projectileLaunch(fitted.params));
+  const horizon = Math.round(8 / MODEL_DT);
+  const nnRoll = rolloutProjectile(fitted.nn, fitted.params, launch, horizon);
+  const pinnRoll = rolloutProjectile(fitted.pinn, fitted.params, launch, horizon);
+  await writeFile(
+    path.join(root, "demo-rollout.json"),
+    `${JSON.stringify({
+      dt: MODEL_DT,
+      stepsTrained: PROJECTILE_PRETRAIN_STEPS,
+      launch,
+      drag: fitted.params.c,
+      nn: Array.from(nnRoll),
+      pinn: Array.from(pinnRoll),
+    })}\n`,
+  );
+  fitted.nn.dispose();
+  fitted.pinn.dispose();
+  console.log(`saved ${root}`);
+}
+
+async function pretrainOrbital(): Promise<void> {
+  const { DEFAULT_ORBITAL, orbitalLaunch } = await import("../src/engine");
+  const { MODEL_DT } = await import("../src/ml/constants");
+  const { fitOrbital, rolloutOrbital, ORBITAL_PRETRAIN_STEPS } = await import("../src/ml/orbital");
+  console.log(`orbital pretrain ${ORBITAL_PRETRAIN_STEPS} steps`);
+  const fitted = await fitOrbital(ORBITAL_PRETRAIN_STEPS, { ...DEFAULT_ORBITAL }, 1);
+  const root = path.resolve("public/models/orbital");
+  await mkdir(path.join(root, "nn"), { recursive: true });
+  await mkdir(path.join(root, "pinn"), { recursive: true });
+  await fitted.nn.save(`file://${path.join(root, "nn")}`);
+  await fitted.pinn.save(`file://${path.join(root, "pinn")}`);
+  const launch = Array.from(orbitalLaunch(fitted.params));
+  const horizon = Math.round(12 / MODEL_DT);
+  const nnRoll = rolloutOrbital(fitted.nn, fitted.params, launch, horizon);
+  const pinnRoll = rolloutOrbital(fitted.pinn, fitted.params, launch, horizon);
+  await writeFile(
+    path.join(root, "demo-rollout.json"),
+    `${JSON.stringify({
+      dt: MODEL_DT,
+      stepsTrained: ORBITAL_PRETRAIN_STEPS,
+      launch,
+      gm: fitted.params.gm,
+      nn: Array.from(nnRoll),
+      pinn: Array.from(pinnRoll),
+    })}\n`,
+  );
+  fitted.nn.dispose();
+  fitted.pinn.dispose();
+  console.log(`saved ${root}`);
+}
+
 async function main(): Promise<void> {
   await import("@tensorflow/tfjs-node");
   const only = process.argv.slice(2);
   const want = (name: string) => only.length === 0 || only.includes(name);
-  if (!want("pendulum")) {
-    await pretrainSpring();
+  if (only.length > 0 && !only.includes("pendulum")) {
+    if (want("spring")) await pretrainSpring();
+    if (want("projectile")) await pretrainProjectile();
+    if (want("orbital")) await pretrainOrbital();
+    if (want("demo-rollout")) await rewriteDemoRollout();
     return;
   }
   const { DEFAULT_PARAMS } = await import("../src/engine");

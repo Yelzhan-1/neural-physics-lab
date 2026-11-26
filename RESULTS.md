@@ -1,8 +1,8 @@
 # Experiment results
 
-On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839). Separate fits, not part of the pendulum seed sweep: Spring-mass at 2s (5% data): NN MSE 0.037, PINN MSE 0.011, winner pinn; Spring-mass at 10s (5% data): NN MSE 0.562, PINN MSE 0.335, winner pinn. Pendulum numbers above are unchanged from the previous run.
+On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839). Separate fits, not part of the pendulum seed sweep: Spring-mass at 2s (5% data): NN MSE 0.037, PINN MSE 0.011, winner pinn; Spring-mass at 10s (5% data): NN MSE 0.562, PINN MSE 0.335, winner pinn; Projectile with drag at 2s (5% data): NN MSE 4.300, PINN MSE 1.311, winner pinn; Projectile with drag at 10s (5% data): NN MSE 6.46e+2, PINN MSE 2.41e+2, winner pinn; Orbital motion at 2s (5% data): NN MSE 0.494, PINN MSE 0.173, winner pinn; Orbital motion at 10s (5% data): NN MSE 24.914, PINN MSE 2.412, winner pinn. Pendulum numbers above are unchanged from the previous run.
 
-Generated 2026-11-26T18:36:17.750Z on the `tensorflow` backend.
+Generated 2026-11-26T19:05:02.817Z on the `tensorflow` backend.
 Seed 2026, dt 0.02 s, hidden layers [64, 64, 64], 1300 optimizer steps, batch 64, learning rate 0.001 cosine to 0.0001, λ 0.4.
 RK4 reference speed: 1.91e-3 ms per model step.
 
@@ -22,6 +22,10 @@ Errors are autoregressive rollout error against RK4, not one-step error. The win
 | Long-term prediction | full data, error over 10 s | 10 s | 1200 | 19.972 | 7.610 | 2.626 | 1.609 | 0.774 | 0.520 | 0.339 | 0.341 | PINN |
 | Spring-mass | undamped, 5% of the data, hidden [32, 32], state MSE in m and m/s | 2 s | 64 | 0.037 | 0.011 | 0.138 | 0.069 | 0.677 | 0.206 | 0.289 | 0.285 | PINN |
 | Spring-mass | undamped, 5% of the data, hidden [32, 32], state MSE in m and m/s | 10 s | 64 | 0.562 | 0.335 | 0.538 | 0.383 | 3.686 | 1.588 | 0.268 | 0.261 | PINN |
+| Projectile with drag | quadratic drag, 5% of the data, hidden [32, 32], state MSE in m and m/s | 2 s | 64 | 4.300 | 1.311 | 1.314 | 0.813 | 0.695 | 1.438 | 0.217 | 0.223 | PINN |
+| Projectile with drag | quadratic drag, 5% of the data, hidden [32, 32], state MSE in m and m/s | 10 s | 64 | 6.46e+2 | 2.41e+2 | 18.610 | 8.417 | 7.648 | 3.414 | 0.206 | 0.201 | PINN |
+| Orbital motion | central gravity, 5% of the data, hidden [32, 32], state MSE in m and m/s | 2 s | 64 | 0.494 | 0.173 | 0.441 | 0.263 | 18.681 | 2.056 | 0.202 | 0.203 | PINN |
+| Orbital motion | central gravity, 5% of the data, hidden [32, 32], state MSE in m and m/s | 10 s | 64 | 24.914 | 2.412 | 3.179 | 1.145 | 5.56e+2 | 5.752 | 0.204 | 0.204 | PINN |
 
 Seed sweep, same budget, sample standard deviation (n − 1):
 

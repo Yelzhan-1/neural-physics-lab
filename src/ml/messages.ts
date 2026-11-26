@@ -1,4 +1,6 @@
-import type { PendulumParams, SpringParams } from "../engine";
+import type { OrbitalParams, PendulumParams, ProjectileParams, SpringParams } from "../engine";
+import type { OrbitalTrainResult } from "./orbital";
+import type { ProjectileTrainResult } from "./projectile";
 import type { ResultRow } from "./results";
 import type { TrainSummary } from "./session";
 import type { SpringTrainResult } from "./spring";
@@ -31,6 +33,32 @@ export type InMessage =
     }
   | { id: number; type: "rollout-spring"; initial: number[]; seconds: number; params: SpringParams }
   | { id: number; type: "load-spring" }
+  | {
+      id: number;
+      type: "train-projectile";
+      fraction: number;
+      lambda: number;
+      params: ProjectileParams;
+      seed: number;
+      steps?: number;
+      calibrate?: boolean;
+      targetMs?: number;
+    }
+  | { id: number; type: "rollout-projectile"; initial: number[]; seconds: number; params: ProjectileParams }
+  | { id: number; type: "load-projectile" }
+  | {
+      id: number;
+      type: "train-orbital";
+      fraction: number;
+      lambda: number;
+      params: OrbitalParams;
+      seed: number;
+      steps?: number;
+      calibrate?: boolean;
+      targetMs?: number;
+    }
+  | { id: number; type: "rollout-orbital"; initial: number[]; seconds: number; params: OrbitalParams }
+  | { id: number; type: "load-orbital" }
   | { id: number; type: "experiment"; experiment: ExperimentId }
   | { id: number; type: "clear" };
 
@@ -41,6 +69,8 @@ export type OutMessage =
   | { id: number; type: "rollout"; nn: ArrayBuffer; pinn: ArrayBuffer; dt: number }
   | { id: number; type: "pretrained" }
   | { id: number; type: "spring-trained"; summary: SpringTrainResult }
+  | { id: number; type: "projectile-trained"; summary: ProjectileTrainResult }
+  | { id: number; type: "orbital-trained"; summary: OrbitalTrainResult }
   | { id: number; type: "experiment"; rows: ResultRow[] }
   | { id: number; type: "cleared" }
   | { id: number; type: "error"; message: string };

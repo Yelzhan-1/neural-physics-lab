@@ -61,6 +61,30 @@ test("spring system switches into a working lab", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("projectile system trains beside the physics", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/lab?system=projectile");
+  await expect(page.getByRole("button", { name: "Projectile with drag" })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("slider", { name: /Launch angle/ })).toBeVisible();
+  await expect(page.getByRole("slider", { name: /Drag/ })).toBeVisible();
+  await expect(page.getByTestId("projectile-scene")).toBeVisible();
+  await page.getByRole("button", { name: "Live train (~20 s)" }).click();
+  await expect(page.getByTestId("train-status")).toHaveText("training", { timeout: 20_000 });
+  expect(errors).toEqual([]);
+});
+
+test("orbital system trains beside the physics", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/lab?system=orbital");
+  await expect(page.getByRole("button", { name: "Orbital motion" })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("slider", { name: /Radius/ })).toBeVisible();
+  await expect(page.getByRole("slider", { name: /Initial speed/ })).toBeVisible();
+  await expect(page.getByTestId("orbital-scene")).toBeVisible();
+  await page.getByRole("button", { name: "Live train (~20 s)" }).click();
+  await expect(page.getByTestId("train-status")).toHaveText("training", { timeout: 20_000 });
+  expect(errors).toEqual([]);
+});
+
 test("challenge mode can reveal a winner", async ({ page }) => {
   test.setTimeout(90_000);
   const errors = collectErrors(page);
