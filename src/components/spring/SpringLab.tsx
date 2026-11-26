@@ -5,7 +5,7 @@ import { DEFAULT_SPRING, type SpringParams } from "@/engine";
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { ParamSlider } from "@/components/lab/ControlPanel";
 import { FractionRow, Instrument, ModelToggles, PlayButton, TrainButton } from "@/components/lab/Instrument";
-import { laneFrames, NARROW_MQ, strokeLaneDividers } from "@/components/lab/lanes";
+import { laneFrames, NARROW_MQ, paintLane, strokeLaneDividers, type LaneFrame } from "@/components/lab/lanes";
 import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
@@ -129,43 +129,14 @@ export function SpringLab() {
       const visible = lanes.length > 0 ? lanes : [{ lane: LANES[0], index: 0 }];
       strokeLaneDividers(context, visible.length, w, h, stacked);
       const frames = laneFrames(visible.length, w, h, stacked);
+      const fit = sharedSpringScale(frames, runtime);
       visible.forEach(({ lane, index }, order) => {
         const frame = frames[order];
         if (!frame) return;
-        const { left, top, width: laneW, height: laneH } = frame;
-        const mid = top + laneH * 0.5;
-        const wall = left + 22;
-        const rest = left + laneW * 0.42;
-        const x = runtime.states[index][0];
-        const leftRoom = Math.max(12, rest - wall - 10);
-        const rightRoom = Math.max(12, left + laneW - 36 - rest);
-        const scale = Math.min(leftRoom / Math.max(0.2, -Math.min(0, x)), rightRoom / Math.max(0.2, Math.max(0, x)));
-        const massX = rest + x * scale;
-        context.strokeStyle = "rgba(237,230,218,0.28)";
-        context.lineWidth = 2;
-        context.beginPath();
-        context.moveTo(wall, top + 18);
-        context.lineTo(wall, top + laneH - 36);
-        context.stroke();
-        context.strokeStyle = lane.color;
-        context.lineWidth = 1.6;
-        context.beginPath();
-        context.moveTo(wall, mid);
-        const coils = 12;
-        const span = Math.max(12, massX - 16 - wall);
-        for (let coil = 0; coil <= coils; coil++) {
-          const px = wall + (span * coil) / coils;
-          const py = coil === 0 || coil === coils ? mid : mid + (coil % 2 === 0 ? 7 : -7);
-          context.lineTo(px, py);
-        }
-        context.stroke();
-        context.fillStyle = lane.color;
-        context.globalAlpha = runtime.active[index] ? 0.95 : 0.35;
-        context.beginPath();
-        context.roundRect(massX - 16, mid - 14, 32, 28, 4);
-        context.fill();
-        context.globalAlpha = 1;
-        drawLaneLabel(context, lane.label, lane.color, left + laneW / 2, top + laneH - 16);
+        paintLane(context, frame, () => {
+          drawSpringLane(context, runtime, index, lane.color, frame, fit.scale, fit.restOffset);
+        });
+        drawLaneLabel(context, lane.label, lane.color, frame.left + frame.width / 2, frame.top + frame.height - 16);
       });
     };
     const loop = (now: number) => {
@@ -386,6 +357,58 @@ export function SpringLab() {
       }
     />
   );
+}
+
+function sharedSpringScale(frames: LaneFrame[], runtime: SpringRuntime): { scale: number; restOffset: number } {
+  let peak = 0.35;
+  for (let slot = 0; slot < 3; slot++) peak = Math.max(peak, Math.abs(runtime.states[slot][0]));
+  let minW = Infinity;
+  for (const frame of frames) minW = Math.min(minW, frame.width);
+  if (!Number.isFinite(minW)) minW = 160;
+  const restOffset = minW * 0.42;
+  const room = Math.min(Math.max(12, restOffset - 32), Math.max(12, minW - 36 - restOffset));
+  return { scale: room / peak, restOffset };
+}
+
+function drawSpringLane(
+  context: CanvasRenderingContext2D,
+  runtime: SpringRuntime,
+  index: number,
+  color: string,
+  frame: LaneFrame,
+  scale: number,
+  restOffset: number,
+) {
+  const { left, top, height } = frame;
+  const mid = top + height * 0.5;
+  const wall = left + 22;
+  const rest = left + restOffset;
+  const massX = rest + runtime.states[index][0] * scale;
+  context.strokeStyle = "rgba(237,230,218,0.28)";
+  context.lineWidth = 2;
+  context.setLineDash([]);
+  context.beginPath();
+  context.moveTo(wall, top + 18);
+  context.lineTo(wall, top + height - 36);
+  context.stroke();
+  context.strokeStyle = color;
+  context.lineWidth = 1.6;
+  context.beginPath();
+  context.moveTo(wall, mid);
+  const coils = 12;
+  const span = Math.max(12, massX - 16 - wall);
+  for (let coil = 0; coil <= coils; coil++) {
+    const px = wall + (span * coil) / coils;
+    const py = coil === 0 || coil === coils ? mid : mid + (coil % 2 === 0 ? 7 : -7);
+    context.lineTo(px, py);
+  }
+  context.stroke();
+  context.fillStyle = color;
+  context.globalAlpha = runtime.active[index] ? 0.95 : 0.35;
+  context.beginPath();
+  context.roundRect(massX - 16, mid - 14, 32, 28, 4);
+  context.fill();
+  context.globalAlpha = 1;
 }
 
 function drawLaneLabel(

@@ -27,7 +27,7 @@ export function Instrument({
   dock?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 pt-4 pb-24 sm:px-6 lg:pb-6">
+    <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-3 pt-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-6">
       <p className="font-num text-[11px] tracking-[0.18em] text-muted-foreground uppercase">Simulation lab</p>
       <div className="mt-1 flex items-end justify-between gap-4">
         <h1 className="text-[clamp(2.1rem,4.2vw,3.5rem)] leading-none font-medium tracking-[-0.055em] text-foreground">
@@ -44,11 +44,11 @@ export function Instrument({
             <h2 className="text-[13px] font-medium text-foreground">Controls</h2>
             <div className="mt-4 grid gap-4">{controls}</div>
           </aside>
-          <section className="order-1 flex min-w-0 flex-col border-b border-hairline lg:order-2 lg:border-r lg:border-b-0">
+          <section className="order-1 flex min-w-0 flex-col border-b border-hairline pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:order-2 lg:border-r lg:border-b-0 lg:pb-0">
             <header className="flex h-10 items-center justify-between border-b border-hairline px-4">
               <h2 className="text-[13px] font-medium text-foreground">Simulation</h2>
             </header>
-            <div className="sim-grid relative min-h-[460px] flex-1 lg:min-h-[480px]">{stage}</div>
+            <div className="sim-grid relative min-h-[calc(100svh-26rem-env(safe-area-inset-bottom))] flex-1 lg:min-h-[480px]">{stage}</div>
             <div className="flex h-12 items-center gap-3 border-t border-hairline px-3">
               <span className="font-num shrink-0 text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
                 Timeline
@@ -63,7 +63,7 @@ export function Instrument({
         </div>
       </div>
       {dock ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-hairline bg-panel px-3 py-2 lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-3 border-t border-hairline bg-panel px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
           {dock}
         </div>
       ) : null}

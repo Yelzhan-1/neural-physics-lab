@@ -16,7 +16,7 @@ import {
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { ParamSlider } from "@/components/lab/ControlPanel";
 import { FractionRow, Instrument, ModelToggles, PlayButton, TrainButton } from "@/components/lab/Instrument";
-import { laneFrames, NARROW_MQ, strokeLaneDividers } from "@/components/lab/lanes";
+import { laneFrames, NARROW_MQ, paintLane, strokeLaneDividers, type LaneFrame } from "@/components/lab/lanes";
 import { driftText, LiveSparks } from "@/components/lab/LiveSparks";
 import { LossChart } from "@/components/lab/LossChart";
 import { MlClient } from "@/ml/client";
@@ -186,15 +186,21 @@ function MotionLab({ kind }: { kind: Kind }) {
       const visible = lanes.length > 0 ? lanes : [SLOTS[0]];
       strokeLaneDividers(context, visible.length, w, h, stacked);
       const frames = laneFrames(visible.length, w, h, stacked);
+      const scale =
+        kind === "projectile"
+          ? sharedProjectileScale(frames, runtime, projectileRef.current)
+          : sharedOrbitScale(frames, runtime, referenceRef.current);
       visible.forEach((slot, order) => {
         const index = SLOTS.findIndex((item) => item.id === slot.id);
         const frame = frames[order];
         if (!frame) return;
-        if (kind === "projectile") {
-          drawProjectile(context, runtime, index, slot.color, projectileRef.current, frame.left, frame.top, frame.width, frame.height);
-        } else {
-          drawOrbit(context, runtime, index, slot.color, referenceRef.current, frame.left, frame.top, frame.width, frame.height);
-        }
+        paintLane(context, frame, () => {
+          if (kind === "projectile") {
+            drawProjectile(context, runtime, index, slot.color, projectileRef.current, frame, scale);
+          } else {
+            drawOrbit(context, runtime, index, slot.color, referenceRef.current, frame, scale);
+          }
+        });
         drawLaneLabel(context, slot.label, slot.color, frame.left + frame.width / 2, frame.top + frame.height + 14);
       });
     };
@@ -530,37 +536,90 @@ function sameLaunch(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((value, index) => Math.abs(value - b[index]) < 1e-3);
 }
 
+function extent(points: ArrayLike<number>): number {
+  let reach = 0;
+  for (let i = 0; i < points.length; i += 2) reach = Math.max(reach, Math.hypot(points[i], points[i + 1]));
+  return reach;
+}
+
+/** One pixel scale for every lane, sized so the union of the paths fits the smallest lane. */
+function sharedOrbitScale(frames: LaneFrame[], runtime: MotionRuntime, reference: number[]): number {
+  let reach = Math.max(0.4, extent(reference));
+  for (let slot = 0; slot < 3; slot++) {
+    const state = runtime.states[slot];
+    reach = Math.max(reach, extent(runtime.trail(slot)), Math.hypot(state[0], state[1]));
+  }
+  let minDim = Infinity;
+  for (const frame of frames) minDim = Math.min(minDim, frame.width, frame.height);
+  if (!Number.isFinite(minDim) || minDim < 40) minDim = 120;
+  return (minDim * 0.4) / (reach * 1.12);
+}
+
+function sharedProjectileScale(frames: LaneFrame[], runtime: MotionRuntime, params: ProjectileParams): number {
+  const radians = (params.angle * Math.PI) / 180;
+  const speed = params.speed;
+  const range = (speed * speed * Math.sin(2 * radians)) / params.g;
+  const apex = (speed * Math.sin(radians)) ** 2 / (2 * params.g);
+  let maxX = Math.max(2, range);
+  let maxY = Math.max(1, apex);
+  for (let slot = 0; slot < 3; slot++) {
+    const trail = runtime.trail(slot);
+    for (let i = 0; i < trail.length; i += 2) {
+      maxX = Math.max(maxX, trail[i]);
+      maxY = Math.max(maxY, trail[i + 1]);
+    }
+    const state = runtime.states[slot];
+    maxX = Math.max(maxX, state[0]);
+    maxY = Math.max(maxY, state[1]);
+  }
+  let minW = Infinity;
+  let minH = Infinity;
+  for (const frame of frames) {
+    minW = Math.min(minW, frame.width);
+    minH = Math.min(minH, frame.height);
+  }
+  if (!Number.isFinite(minW)) {
+    minW = 160;
+    minH = 160;
+  }
+  return Math.min((minW - 28) / (maxX * 1.12), (minH - 28) / (maxY * 1.16));
+}
+
 function drawProjectile(
   context: CanvasRenderingContext2D,
   runtime: MotionRuntime,
   slot: number,
   color: string,
-  params: { angle: number; speed: number; g: number },
-  left: number,
-  top: number,
-  width: number,
-  height: number,
+  params: ProjectileParams,
+  frame: LaneFrame,
+  scale: number,
 ) {
+  const { left, top, width, height } = frame;
   const trail = runtime.trail(slot);
-  const radians = (params.angle * Math.PI) / 180;
-  const apex = (params.speed * Math.sin(radians)) ** 2 / (2 * params.g);
-  const range = (params.speed * params.speed * Math.sin(2 * radians)) / params.g;
-  let maxX = Math.max(2, range);
-  let maxY = Math.max(1, apex);
-  for (let i = 0; i < trail.length; i += 2) {
-    maxX = Math.max(maxX, trail[i]);
-    maxY = Math.max(maxY, trail[i + 1]);
-  }
-  const stateAhead = runtime.states[slot];
-  maxX = Math.max(maxX, stateAhead[0]);
-  maxY = Math.max(maxY, stateAhead[1]);
   const ground = top + height - 16;
-  const scale = Math.min((width - 28) / (maxX * 1.08), (ground - top - 12) / (maxY * 1.12));
   const originX = left + 12;
+  const radians = (params.angle * Math.PI) / 180;
+  const vx = params.speed * Math.cos(radians);
+  const vy = params.speed * Math.sin(radians);
+  context.setLineDash([]);
   context.strokeStyle = "rgba(237,230,218,0.22)";
+  context.lineWidth = 1;
   context.beginPath();
   context.moveTo(left, ground);
   context.lineTo(left + width, ground);
+  context.stroke();
+  context.strokeStyle = "rgba(237,230,218,0.55)";
+  context.lineWidth = 1.2;
+  context.beginPath();
+  const samples = 40;
+  const flight = (2 * vy) / Math.max(params.g, 0.1);
+  for (let i = 0; i <= samples; i++) {
+    const t = (i / samples) * flight;
+    const x = originX + vx * t * scale;
+    const y = ground - Math.max(0, vy * t - 0.5 * params.g * t * t) * scale;
+    if (i === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
   context.stroke();
   context.strokeStyle = color;
   context.lineWidth = 1.8;
@@ -581,7 +640,7 @@ function drawProjectile(
   context.fill();
   context.globalAlpha = 1;
   if (state[1] <= 0 && state[0] > 0.05) {
-    context.fillStyle = "#f8fafc";
+    context.fillStyle = "#ede6da";
     context.beginPath();
     context.moveTo(originX + state[0] * scale, ground - 8);
     context.lineTo(originX + state[0] * scale - 5, ground + 2);
@@ -596,20 +655,14 @@ function drawOrbit(
   slot: number,
   color: string,
   reference: number[],
-  left: number,
-  top: number,
-  width: number,
-  height: number,
+  frame: LaneFrame,
+  scale: number,
 ) {
+  const { left, top, width, height } = frame;
   const trail = runtime.trail(slot);
-  let reach = 0.4;
-  for (let i = 0; i < reference.length; i += 2) reach = Math.max(reach, Math.hypot(reference[i], reference[i + 1]));
-  for (let i = 0; i < trail.length; i += 2) reach = Math.max(reach, Math.hypot(trail[i], trail[i + 1]));
-  const stateReach = runtime.states[slot];
-  reach = Math.max(reach, Math.hypot(stateReach[0], stateReach[1]));
   const cx = left + width * 0.5;
   const cy = top + height * 0.5;
-  const scale = (Math.min(width, height) * 0.4) / (reach * 1.08);
+  context.setLineDash([]);
   context.fillStyle = "#ede6da";
   context.beginPath();
   context.arc(cx, cy, 4.5, 0, Math.PI * 2);

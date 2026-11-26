@@ -74,7 +74,7 @@ export function PendulumScene({
   slots = ALL_SLOTS,
   interactive = false,
   showLabels = true,
-  showGuides = true,
+  showGuides = false,
   zoom = 1,
   pivotY = 0.47,
   trailWidth = 1.8,
@@ -221,7 +221,7 @@ export function PendulumScene({
       computeCells(cellCount, narrow && cellCount === 3);
 
       if (!overlay) {
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.1)";
+        ctx.strokeStyle = "rgba(237, 230, 218, 0.16)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let cell = 1; cell < cellCount; cell++) {

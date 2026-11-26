@@ -416,13 +416,6 @@ export function drawGhost(
     return;
   }
 
-  ctx.globalAlpha = 0.3;
-  ctx.lineWidth = 1;
-  ctx.lineDashOffset = -seconds * 9;
-  ctx.beginPath();
-  ctx.arc(pivotX, pivotY, (params.l1 + params.l2) * scale, 0, TAU);
-  ctx.stroke();
-
   ctx.globalAlpha = 0.5 + 0.18 * Math.sin(seconds * 1.6);
   ctx.lineWidth = 1.5 * size;
   ctx.lineDashOffset = 0;

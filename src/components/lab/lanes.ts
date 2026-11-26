@@ -55,3 +55,63 @@ export function strokeLaneDividers(
   }
   context.stroke();
 }
+
+/** Hard clip, then fade the rim so a line that still leaves the lane dissolves instead of ending in a cut. */
+export function paintLane(
+  context: CanvasRenderingContext2D,
+  frame: LaneFrame,
+  draw: () => void,
+) {
+  context.save();
+  context.beginPath();
+  context.rect(frame.left, frame.top, frame.width, frame.height);
+  context.clip();
+  draw();
+  const band = Math.min(14, frame.width * 0.07, frame.height * 0.07);
+  if (band > 2) {
+    context.globalCompositeOperation = "destination-out";
+    fadeEdge(context, frame.left, frame.top, band, frame.height, frame.left, 0, frame.left + band, 0);
+    fadeEdge(
+      context,
+      frame.left + frame.width - band,
+      frame.top,
+      band,
+      frame.height,
+      frame.left + frame.width,
+      0,
+      frame.left + frame.width - band,
+      0,
+    );
+    fadeEdge(context, frame.left, frame.top, frame.width, band, 0, frame.top, 0, frame.top + band);
+    fadeEdge(
+      context,
+      frame.left,
+      frame.top + frame.height - band,
+      frame.width,
+      band,
+      0,
+      frame.top + frame.height,
+      0,
+      frame.top + frame.height - band,
+    );
+  }
+  context.restore();
+}
+
+function fadeEdge(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+) {
+  const gradient = context.createLinearGradient(x0, y0, x1, y1);
+  gradient.addColorStop(0, "rgba(0,0,0,0.85)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  context.fillStyle = gradient;
+  context.fillRect(x, y, width, height);
+}
