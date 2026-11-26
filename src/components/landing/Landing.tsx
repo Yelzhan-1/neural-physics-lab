@@ -1,9 +1,9 @@
 "use client";
 
-import { motion, type Variants } from "motion/react";
+import { motion, useScroll, useSpring, type Variants } from "motion/react";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { PendulumScene } from "@/components/scene/PendulumScene";
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { useLabRuntime } from "@/components/scene/useLabRuntime";
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const EASE = [0.22, 1, 0.36, 1] as const;
 const PHYSICS_ONLY: readonly SlotId[] = ["physics"];
 const HEADLINE = ["AI", "that", "learns", "from", "the"];
-const HEADLINE_ACCENT = ["laws", "of", "nature"];
+const HEADLINE_ACCENT = "laws of nature";
 
 const word: Variants = {
   hidden: { opacity: 0, y: 28, filter: "blur(14px)" },
@@ -53,6 +53,13 @@ export function Landing() {
     runtime.setInitialAngles((120 * Math.PI) / 180, (-20 * Math.PI) / 180);
   }, [runtime]);
 
+  const chaptersRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: chaptersRef,
+    offset: ["start 75%", "end 85%"],
+  });
+  const beam = useSpring(scrollYProgress, { stiffness: 90, damping: 24, mass: 0.4 });
+
   return (
     <main className="flex-1">
       <section className="relative -mt-[76px] flex min-h-[max(100svh,680px)] flex-col items-center justify-center overflow-hidden px-5 pt-[76px] text-center">
@@ -61,7 +68,7 @@ export function Landing() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.6, ease: "easeOut" }}
-          className="absolute inset-0"
+          className="absolute inset-0 [mask-image:linear-gradient(to_bottom,black_72%,transparent)]"
         >
           <PendulumScene
             runtime={runtime}
@@ -74,7 +81,6 @@ export function Landing() {
             ariaLabel="Live double pendulum simulated by the physics engine"
           />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_62%_46%_at_50%_52%,rgb(4_5_13/82%),rgb(4_5_13/38%)_58%,transparent_82%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background" />
         </motion.div>
 
         <motion.div
@@ -98,18 +104,9 @@ export function Landing() {
               </motion.span>
             ))}
             <br />
-            {HEADLINE_ACCENT.map((text, index) => (
-              <motion.span
-                key={text}
-                variants={word}
-                className={cn(
-                  "text-aurora inline-block pb-[0.08em]",
-                  index < HEADLINE_ACCENT.length - 1 && "mr-[0.22em]",
-                )}
-              >
-                {text}
-              </motion.span>
-            ))}
+            <motion.span variants={word} className="text-aurora inline-block pb-[0.08em]">
+              {HEADLINE_ACCENT}
+            </motion.span>
           </h1>
 
           <motion.p
@@ -149,7 +146,19 @@ export function Landing() {
         </motion.div>
       </section>
 
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-28 px-5 py-24 sm:px-8 sm:py-32 lg:gap-40">
+      <div
+        ref={chaptersRef}
+        className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-28 px-5 py-24 sm:px-8 sm:py-32 lg:gap-40"
+      >
+        <div
+          aria-hidden
+          className="absolute top-32 bottom-40 -left-6 hidden w-px bg-white/[0.07] min-[1320px]:block"
+        >
+          <motion.div
+            style={{ scaleY: beam }}
+            className="h-full w-px origin-top bg-gradient-to-b from-physics via-pinn to-nn shadow-[0_0_12px_var(--physics)]"
+          />
+        </div>
         <Chapter
           id="problem"
           index="01"
@@ -232,7 +241,13 @@ export function Landing() {
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {model.text}
                     </p>
-                    <p className="font-num mt-5 text-[11px] tracking-[0.12em] text-white/45 uppercase">
+                    <p className="font-num mt-5 flex items-center gap-2 text-[11px] tracking-[0.12em] text-white/45 uppercase">
+                      {model.id === "physics" && (
+                        <span className="relative flex size-1.5">
+                          <span className="absolute inset-0 animate-ping rounded-full bg-physics opacity-70" />
+                          <span className="relative size-1.5 rounded-full bg-physics" />
+                        </span>
+                      )}
                       {model.status}
                     </p>
                   </SpotlightCard>

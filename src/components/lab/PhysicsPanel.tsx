@@ -70,8 +70,8 @@ export function PhysicsPanel({ runtime }: { runtime: LabRuntime }) {
   }, [runtime]);
 
   return (
-    <div ref={rootRef}>
-    <SpotlightCard className="grid gap-x-8 gap-y-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <div ref={rootRef} className="@container">
+    <SpotlightCard className="grid gap-x-8 gap-y-6 p-5 sm:p-6 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <section aria-label="Kinematics">
         <header className="mb-4 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold tracking-tight text-white">Physics panel</h2>
@@ -79,7 +79,7 @@ export function PhysicsPanel({ runtime }: { runtime: LabRuntime }) {
             t = <span data-readout={16}>0.00</span> s
           </p>
         </header>
-        <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-4 gap-y-2.5 text-xs">
+        <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-3 sm:gap-x-4 gap-y-2.5 text-xs">
           <span />
           <span className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
             Bob 1 <span className="tracking-normal normal-case opacity-70">(x, y)</span>
@@ -91,17 +91,17 @@ export function PhysicsPanel({ runtime }: { runtime: LabRuntime }) {
             <div key={row.label} className="contents">
               <span className="text-muted-foreground">
                 {row.label}
-                <span className="ml-1 opacity-60">{row.unit}</span>
+                <span className="block opacity-60 sm:ml-1 sm:inline">{row.unit}</span>
               </span>
               {[0, 1].map((bob) => (
                 <span
                   key={bob}
-                  className="font-num flex gap-3 rounded-md bg-white/[0.035] px-2.5 py-1.5 text-[13px] whitespace-pre text-white/90"
+                  className="font-num flex gap-1.5 rounded-md bg-white/[0.035] px-2 py-1.5 text-xs whitespace-pre text-white/90 sm:gap-3 sm:px-2.5 sm:text-[13px]"
                 >
-                  <span data-readout={rowIndex * 4 + bob * 2} className="min-w-[3.4em]">
+                  <span data-readout={rowIndex * 4 + bob * 2} className="min-w-[3.1em] sm:min-w-[3.4em]">
                     +0.00
                   </span>
-                  <span data-readout={rowIndex * 4 + bob * 2 + 1} className="min-w-[3.4em]">
+                  <span data-readout={rowIndex * 4 + bob * 2 + 1} className="min-w-[3.1em] sm:min-w-[3.4em]">
                     +0.00
                   </span>
                 </span>

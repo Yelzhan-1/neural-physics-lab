@@ -58,7 +58,7 @@ export function Lab() {
 
   return (
     <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="grid min-w-0 content-start gap-4">
+      <div className="grid min-w-0 grid-cols-1 content-start gap-4">
         <motion.div {...entrance} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
           <SpotlightCard className="overflow-hidden">
             <div className="h-[480px] sm:h-[clamp(360px,46vh,560px)]">

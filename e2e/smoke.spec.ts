@@ -55,8 +55,10 @@ test("lab renders the scene, the controls and a moving simulation", async ({ pag
   // Pausing freezes it.
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  // The readout refreshes at 10 Hz, so let its last update land before sampling.
+  await page.waitForTimeout(300);
   const frozen = await clock.textContent();
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(500);
   expect(await clock.textContent()).toBe(frozen);
   expect(errors).toEqual([]);
 });

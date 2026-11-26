@@ -45,7 +45,7 @@ const UNTRAINED_LEGEND = SLOTS.map((slot) => `${slot.label}  ·  not trained yet
 const DRAG_HINT = "Drag a bob to set the starting pose";
 const GRAB_RADIUS = 30;
 /** Below this canvas width the split layout stacks instead of using columns. */
-const STACK_BREAKPOINT = 640;
+const STACK_BREAKPOINT = 560;
 const CELL_STRIDE = 4;
 const LEAD_COLUMN_WEIGHT = 1.45;
 
