@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-const NN = "#fb923c";
-const PINN = "#a78bfa";
+const NN = "#f5b942";
+const PINN = "#b388ff";
 
 /** Data-loss curves. Amber is the standard NN, violet is the PINN. */
 export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {

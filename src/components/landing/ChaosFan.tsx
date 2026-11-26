@@ -9,14 +9,23 @@ const BASE = 2.2;
 
 function color(index: number): string {
   const t = index / (COUNT - 1);
-  const r = Math.round(34 + (167 - 34) * t);
-  const g = Math.round(211 + (139 - 211) * t);
-  const b = Math.round(238 + (250 - 238) * t);
-  return `rgb(${r} ${g} ${b})`;
+  // Cyan, through amber, to violet. The fan is the three lab colours spreading apart.
+  const stops = [
+    [34, 211, 238],
+    [245, 185, 66],
+    [179, 136, 255],
+  ];
+  const scaled = t * (stops.length - 1);
+  const i = Math.min(stops.length - 2, Math.floor(scaled));
+  const f = scaled - i;
+  const a = stops[i];
+  const b = stops[i + 1];
+  const mix = a.map((channel, axis) => Math.round(channel + (b[axis] - channel) * f));
+  return `rgb(${mix[0]} ${mix[1]} ${mix[2]})`;
 }
 
 /** Fifty double pendulums, each released 0.0001 rad further than the last. */
-export function ChaosFan() {
+export function ChaosFan({ compact = false }: { compact?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = useReducedMotion();
 
@@ -46,9 +55,10 @@ export function ChaosFan() {
       const w = rect.width;
       const h = rect.height;
       context.clearRect(0, 0, w, h);
+      const compact = h < 220;
       const pivotX = w / 2;
-      const pivotY = h * 0.22;
-      const scale = Math.min(w, h) * 0.22;
+      const pivotY = compact ? 6 : h * 0.22;
+      const scale = compact ? h * 0.42 : Math.min(w, h) * 0.22;
       for (let index = 0; index < COUNT; index++) {
         const state = states[index];
         const x1 = pivotX + Math.sin(state[0]) * scale;
@@ -57,7 +67,7 @@ export function ChaosFan() {
         const y2 = y1 + Math.cos(state[1]) * scale;
         context.strokeStyle = color(index);
         context.globalAlpha = 0.85;
-        context.lineWidth = 1.25;
+        context.lineWidth = compact ? 1.7 : 1.25;
         context.beginPath();
         context.moveTo(pivotX, pivotY);
         context.lineTo(x1, y1);
@@ -119,7 +129,9 @@ export function ChaosFan() {
     };
   }, [reduced]);
 
-  return (
+  return compact ? (
+    <canvas ref={canvasRef} aria-label="Chaos fan" className="block h-full w-full" />
+  ) : (
     <section className="mx-auto w-full max-w-[1200px] px-5 py-8 sm:px-8" aria-label="Chaos fan">
       <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]">
         <canvas ref={canvasRef} className="block h-[420px] w-full" />

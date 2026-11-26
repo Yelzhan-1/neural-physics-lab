@@ -251,6 +251,7 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
                 variant={demo ? "default" : "outline"}
                 aria-pressed={demo}
                 onClick={() => (demo ? leaveDemo() : enterDemo())}
+                className="rounded-full"
               >
                 Demo mode
               </Button>
@@ -314,13 +315,12 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
         <ModelPanel runtime={runtime} slotsReady={models.slotsReady} />
       </motion.div>
 
-      <motion.div
-        {...entrance}
-        transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-        className="order-5 min-w-0 lg:col-start-1"
-      >
-        <PhysicsPanel runtime={runtime} />
-      </motion.div>
+      <details className="order-5 min-w-0 rounded-2xl border border-white/10 bg-white/[0.02] lg:col-start-1">
+        <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-white">Physics readout</summary>
+        <div className="px-1 pb-1">
+          <PhysicsPanel runtime={runtime} />
+        </div>
+      </details>
 
       <div className="order-3 grid content-start gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-2 lg:row-span-3 lg:max-h-[calc(100svh-2rem)] lg:self-start lg:overflow-y-auto">
         <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}>
@@ -334,15 +334,18 @@ function PendulumLab({ demo = false }: { demo?: boolean }) {
             setAngles={setAngles}
           />
         </motion.div>
-        <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}>
-          <ControlPanel
-            params={params}
-            theta1={theta1}
-            theta2={theta2}
-            onParamsChange={setParams}
-            onAnglesChange={setAngles}
-          />
-        </motion.div>
+        <details className="rounded-2xl border border-white/10 bg-white/[0.02]">
+          <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-white">Sandbox</summary>
+          <div className="px-1 pb-1">
+            <ControlPanel
+              params={params}
+              theta1={theta1}
+              theta2={theta2}
+              onParamsChange={setParams}
+              onAnglesChange={setAngles}
+            />
+          </div>
+        </details>
       </div>
     </main>
   );

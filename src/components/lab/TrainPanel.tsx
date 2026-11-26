@@ -44,10 +44,7 @@ export function TrainPanel({
             {status}
           </p>
         </div>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Same data, same initial weights. The PINN adds λ times the equations of motion, including
-          states that have no label.
-        </p>
+        <p className="mt-1 text-xs text-white/55">Same data. The PINN also pays for breaking the equations.</p>
 
         <div className="mt-5">
           <ParamSlider
@@ -90,7 +87,7 @@ export function TrainPanel({
         </details>
 
         <Button
-          className="mt-5 h-10 w-full text-sm font-semibold shadow-[0_0_24px_-8px_var(--pinn)]"
+          className="mt-5 h-12 w-full rounded-full text-sm font-semibold"
           disabled={busy}
           onClick={models.liveTrain}
         >
@@ -113,11 +110,13 @@ export function TrainPanel({
             {etaLabel}
           </p>
         )}
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Live train times a few steps on this device, then picks a step count so both models finish
-          in about 16 seconds. The loss curves run live. The rollout is one batched pass, then the
-          lab jumps to where the networks split and plays at 2×.
-        </p>
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-white/45">How live train works</summary>
+          <p className="mt-2 text-xs leading-relaxed text-white/55">
+            A few steps are timed on this device, then both models train for about 16 seconds. The
+            rollout is one pass, and the lab jumps to where the networks split.
+          </p>
+        </details>
 
         <div className="mt-4 h-24 overflow-hidden rounded-lg bg-black/25 ring-1 ring-white/5">
           <LossChart nn={models.nnLoss} pinn={models.pinnLoss} />

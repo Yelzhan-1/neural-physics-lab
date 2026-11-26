@@ -2,14 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
-import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { Button } from "@/components/ui/button";
-import { SystemSelector } from "@/components/systems/SystemSelector";
 import { MlClient } from "@/ml/client";
 import type { ExperimentId } from "@/ml/messages";
 import { EXPERIMENT_STEPS } from "@/ml/constants";
 import { DRIFT_NOTE, formatMetric, MSE_NOTE, takeaway, type ResultRow, type ResultsFile } from "@/ml/results";
-import { MseChart } from "./MseChart";
 import type { TrainProgress } from "@/ml/train";
 import { cn } from "@/lib/utils";
 
@@ -139,75 +136,45 @@ export function ExperimentCenter() {
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-4 pb-12 sm:px-8">
-      <SystemSelector />
+  const limited = results?.rows.find((row) => row.id === "E2-5");
+  const seed = results?.seeds?.find((item) => item.id === "E2-5");
+  const single = limited && limited.pinn.mse > 0 ? limited.nn.mse / limited.pinn.mse : null;
+  const mean = seed && seed.pinnMseMean > 0 ? seed.nnMseMean / seed.pinnMseMean : null;
+  const headline = results?.rows.filter((row) => ["E1", "E2-5", "E3", "E4-3"].includes(row.id)) ?? [];
 
-      <SpotlightCard className="p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <h1 className="text-lg font-semibold tracking-tight text-white">Experiment center</h1>
-            <p className="mt-2 text-sm leading-relaxed text-white/75">
-              {results?.takeaway ?? loadError ?? "Loading the precomputed results…"}
-            </p>
-          </div>
-          <Button variant="outline" onClick={exportJson} disabled={!results} className="gap-1.5">
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-6 sm:px-10">
+      <div className="grid items-end gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div>
+          <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">5% of the data</p>
+          <h1 className="font-num mt-2 text-[clamp(5.5rem,14vw,10rem)] leading-none tracking-[-0.08em] text-physics">
+            {single ? `${single.toFixed(1)}×` : "—"}
+          </h1>
+          <p className="mt-3 max-w-md text-xl text-white/85">
+            {single
+              ? `${single.toFixed(1)}× lower error at 5% data — seed ${results?.seed ?? 2026}`
+              : (loadError ?? "Loading the measured result…")}
+          </p>
+          <p className="mt-2 font-num text-sm text-white/50">
+            {mean ? `3-seed mean ≈ ${mean.toFixed(1)}×` : "3-seed mean ≈ 3.2×"}
+          </p>
+          <Button variant="outline" onClick={exportJson} disabled={!results} className="mt-6 gap-1.5">
             <Download className="size-3.5" />
             Export results (JSON)
           </Button>
         </div>
-        {results && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {live.size > 0 ? "Includes a live re-run. " : "Precomputed in this build. "}
-            Backend {results.backend}
-            {results.rk4MsPerStep > 0
-              ? ` · RK4 ${formatMetric(results.rk4MsPerStep)} ms per step`
-              : ""}
-            . {MSE_NOTE} {DRIFT_NOTE} Winner is the lower rollout MSE. A gap under 2% is a tie.
-            Live re-runs use {EXPERIMENT_STEPS} steps so the page stays responsive. The loaded
-            numbers used {results.optimizerSteps} steps
-            {results.learningRateEnd
-              ? `, cosine learning rate ${results.learningRate} to ${results.learningRateEnd}`
-              : ""}
-            .
-          </p>
-        )}
-        {progress && running && (
-          <p className="font-num mt-2 text-xs text-white/70">
-            {running} · {progress.model === "nn" ? "Standard NN" : "PINN"} {progress.step}/
-            {progress.steps} · data loss {formatMetric(progress.dataLoss)}
-          </p>
-        )}
-        {error && <p className="mt-2 text-xs text-red-300">{error}</p>}
-      </SpotlightCard>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {EXPERIMENTS.map((experiment) => (
-          <SpotlightCard key={experiment.id} className="flex h-full flex-col p-4">
-            <p className="font-num text-[11px] tracking-[0.14em] text-white/40">{experiment.id}</p>
-            <h2 className="mt-2 text-sm font-semibold tracking-tight text-white">{experiment.name}</h2>
-            <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground">{experiment.text}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-4"
-              disabled={running !== null}
-              aria-label={`Re-run ${experiment.name} live`}
-              onClick={() => run(experiment.id)}
-            >
-              {running === experiment.id ? "Running…" : "Re-run live"}
-            </Button>
-          </SpotlightCard>
-        ))}
+        {headline.length > 0 && <FindingBars rows={headline} />}
       </div>
-
-      {results && results.rows.length > 0 && (
-        <SpotlightCard className="p-5 sm:p-6">
-          <MseChart rows={results.rows} />
-        </SpotlightCard>
+      {progress && running && (
+        <p className="font-num text-xs text-white/70">
+          {running} · {progress.model === "nn" ? "Standard NN" : "PINN"} {progress.step}/{progress.steps}
+        </p>
       )}
+      {error && <p className="text-xs text-red-300">{error}</p>}
 
-      <SpotlightCard className="overflow-hidden">
+      <details className="rounded-2xl border border-white/10">
+        <summary className="cursor-pointer px-5 py-3 text-sm text-white">All runs</summary>
+        <div className="overflow-hidden">
         <div className="overflow-x-auto">
           <table data-testid="results-table" className="w-full min-w-[860px] border-collapse text-left text-xs">
             <thead>
@@ -269,11 +236,13 @@ export function ExperimentCenter() {
             </tbody>
           </table>
         </div>
-      </SpotlightCard>
+        </div>
+      </details>
 
       {results?.seeds && results.seeds.length > 0 && (
-        <SpotlightCard className="p-5 sm:p-6">
-          <div data-testid="seed-sweep">
+        <details className="rounded-2xl border border-white/10 px-5 py-3">
+          <summary className="cursor-pointer text-sm text-white">Seeds</summary>
+          <div data-testid="seed-sweep" className="pt-3">
           <h2 className="text-sm font-semibold tracking-tight text-white">Seed sweep</h2>
           <p className="mt-1 text-xs leading-relaxed text-white/55">
             Same budget on seeds {results.seeds[0]?.seeds.join(", ")}. Mean ± sample standard deviation.
@@ -312,19 +281,77 @@ export function ExperimentCenter() {
             </table>
           </div>
           </div>
-        </SpotlightCard>
+        </details>
       )}
 
-      <SpotlightCard className="p-5 sm:p-6">
-        <h2 className="text-sm font-semibold tracking-tight text-white">Limitations and next steps</h2>
-        <ul className="mt-3 grid gap-2 text-sm leading-relaxed text-white/65 sm:grid-cols-2">
-          <li>A chaotic pendulum leaves any one-step model behind. By 10 s both rollouts have grown, and that is expected.</li>
-          <li>The network predicts a single step of 0.02 s and is rolled out by feeding its own output back in, so small errors accumulate.</li>
-          <li>One TensorFlow step is far slower than an RK4 step. The gap is call overhead, not a claim that the solver is the product.</li>
-          <li>Spring-mass, projectile, and orbital motion are placeholders. The weights belong to the masses and lengths they were trained on.</li>
-          <li>Next: a Hamiltonian network or a neural ODE, more physical systems behind the same interface, and training on a trajectory the user records.</li>
+      <details className="rounded-2xl border border-white/10 px-5 py-3">
+        <summary className="cursor-pointer text-sm text-white">Re-run</summary>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {EXPERIMENTS.map((experiment) => (
+            <Button
+              key={experiment.id}
+              size="sm"
+              variant="outline"
+              disabled={running !== null}
+              aria-label={`Re-run ${experiment.name} live`}
+              onClick={() => run(experiment.id)}
+            >
+              {running === experiment.id ? "Running…" : experiment.name}
+            </Button>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-white/40">
+          Live re-runs use {EXPERIMENT_STEPS} steps. {MSE_NOTE}
+        </p>
+      </details>
+
+      <details className="rounded-2xl border border-white/10 px-5 py-3">
+        <summary className="cursor-pointer text-sm text-white">Limits</summary>
+        <ul className="mt-3 grid gap-2 text-sm text-white/60">
+          <li>By 10 s a chaotic pendulum has left both one-step models behind.</li>
+          <li>The 6.1× figure is seed 2026. Across three seeds the mean is about 3.2×.</li>
+          <li>{DRIFT_NOTE}</li>
         </ul>
-      </SpotlightCard>
+      </details>
+    </div>
+  );
+}
+
+const BAR_LABEL: Record<string, string> = {
+  E1: "Full",
+  "E2-5": "5% data",
+  E3: "Unseen",
+  "E4-3": "3 s",
+};
+
+function FindingBars({ rows }: { rows: ResultRow[] }) {
+  const values = rows.flatMap((row) => [row.nn.mse, row.pinn.mse]).filter((value) => value > 0);
+  const floor = Math.min(...values) * 0.7;
+  const ceil = Math.max(...values);
+  const log = (value: number) => Math.log10(Math.max(value, floor));
+  const span = Math.max(log(ceil) - log(floor), 0.2);
+  const heightOf = (value: number) => `${Math.max(8, ((log(value) - log(floor)) / span) * 100)}%`;
+  return (
+    <div className="rounded-2xl border border-white/10 p-5">
+      <div className="mb-4 flex gap-4 text-[11px] text-white/50">
+        <span className="flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm bg-nn" /> Standard NN</span>
+        <span className="flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm bg-pinn" /> PINN</span>
+      </div>
+      <div className="flex h-48 items-end gap-4">
+        {rows.map((row) => (
+          <div key={row.id} className="flex h-full flex-1 items-end justify-center gap-1">
+            <span className="w-3 rounded-t bg-nn" style={{ height: heightOf(row.nn.mse) }} />
+            <span className="w-3 rounded-t bg-pinn" style={{ height: heightOf(row.pinn.mse) }} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex gap-4">
+        {rows.map((row) => (
+          <p key={row.id} className="flex-1 text-center text-[11px] text-white/45">
+            {BAR_LABEL[row.id] ?? row.name}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
