@@ -152,8 +152,8 @@ export function ModelPanel({ runtime, slotsReady = false }: { runtime: LabRuntim
     <div ref={rootRef}>
       <SpotlightCard className="p-5 sm:p-6">
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold tracking-tight text-white">Model readout</h2>
-          <p className="text-xs text-muted-foreground">Tip error against RK4, and relative energy drift |ΔE|/|E0|</p>
+          <h2 className="text-sm font-semibold tracking-tight text-white">Versus RK4</h2>
+          <p className="text-xs text-white/45">Tip error · |ΔE|/|E0|</p>
         </header>
         <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2].map((slot) => (
@@ -170,13 +170,13 @@ export function ModelPanel({ runtime, slotsReady = false }: { runtime: LabRuntim
               <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <dt className="text-muted-foreground">Tip error</dt>
-                  <dd data-model={(slot - 1) * 2} className="font-num mt-0.5 text-white">
+                  <dd data-model={(slot - 1) * 2} className="font-num mt-1 text-2xl tracking-tight text-white">
                     —
                   </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">|ΔE|/|E0|</dt>
-                  <dd data-model={(slot - 1) * 2 + 1} className="font-num mt-0.5 text-white">
+                  <dd data-model={(slot - 1) * 2 + 1} className="font-num mt-1 text-2xl tracking-tight text-white">
                     —
                   </dd>
                 </div>

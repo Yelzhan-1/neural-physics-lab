@@ -12,17 +12,13 @@ function collectErrors(page: Page): string[] {
 test("landing describes the four experiments and the trainable models", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/");
-  await expect(page.getByText("Not trained yet")).toHaveCount(0);
-  await expect(page.getByText("Model training arrives in the lab next")).toHaveCount(0);
-  for (const name of [
-    "Standard conditions",
-    "Limited training data",
-    "Unseen initial conditions",
-    "Long-term prediction",
-  ]) {
-    await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Learning from chaos." })).toBeVisible();
+  await expect(page.getByText("6.1× lower error at 5% data — seed 2026")).toBeVisible();
+  await expect(page.getByText("3-seed mean ≈ 3.2×")).toBeVisible();
+  for (const name of ["Double pendulum", "Spring-mass", "Projectile with drag", "Orbital motion"]) {
+    await expect(page.getByRole("link", { name })).toBeVisible();
   }
-  await expect(page.getByText("Trains in your browser").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Enter the Lab" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -119,6 +115,7 @@ test("qr page shows a code for the live site", async ({ page }) => {
 test("experiments page shows computed results and can export them", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto("/experiments");
+  await page.getByText("All runs", { exact: true }).click();
   const table = page.getByTestId("results-table");
   await expect(table).toContainText("Standard conditions");
   await expect(table).toContainText("Limited training data");
@@ -126,6 +123,7 @@ test("experiments page shows computed results and can export them", async ({ pag
   await expect(table).toContainText("Long-term prediction");
   await expect(table.getByText("PINN").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Export results (JSON)" })).toBeEnabled();
+  await page.getByText("Re-run", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Re-run Standard conditions live" })).toBeEnabled();
   expect(errors).toEqual([]);
 });

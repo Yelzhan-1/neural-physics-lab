@@ -1,16 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { SpaceBackdrop } from "@/components/site/SpaceBackdrop";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const inter = localFont({
+  src: [
+    { path: "../../design/team-kit/fonts/Inter-400-normal.ttf", weight: "400" },
+    { path: "../../design/team-kit/fonts/Inter-500-normal.ttf", weight: "500" },
+    { path: "../../design/team-kit/fonts/Inter-600-normal.ttf", weight: "600" },
+    { path: "../../design/team-kit/fonts/Inter-700-normal.ttf", weight: "700" },
+  ],
+  variable: "--font-inter",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const plex = localFont({
+  src: [
+    { path: "../../design/team-kit/fonts/IBM-Plex-Mono-400-normal.ttf", weight: "400" },
+    { path: "../../design/team-kit/fonts/IBM-Plex-Mono-500-normal.ttf", weight: "500" },
+  ],
+  variable: "--font-plex",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${inter.variable} ${plex.variable} dark h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <SpaceBackdrop />

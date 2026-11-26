@@ -25,8 +25,8 @@ export interface SlotDefinition {
 
 export const SLOTS: readonly SlotDefinition[] = [
   { id: "physics", label: "Physics (RK4)", color: "#22d3ee", rgb: "34, 211, 238" },
-  { id: "nn", label: "Standard NN", color: "#fb923c", rgb: "251, 146, 60" },
-  { id: "pinn", label: "PINN", color: "#a78bfa", rgb: "167, 139, 250" },
+  { id: "nn", label: "Standard NN", color: "#f5b942", rgb: "245, 185, 66" },
+  { id: "pinn", label: "PINN", color: "#b388ff", rgb: "179, 136, 255" },
 ];
 
 export const SLOT_COUNT = SLOTS.length;

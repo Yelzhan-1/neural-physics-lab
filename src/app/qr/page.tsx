@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter, SiteHeader } from "@/components/site/SiteHeader";
 
 export const metadata: Metadata = {
   title: "Scan to try · Neural Physics Lab",
@@ -10,51 +10,44 @@ export const metadata: Metadata = {
 export default function QrPage() {
   return (
     <>
-      <SiteHeader>
-        <Link
-          href="/lab"
-          className="rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-white"
-        >
-          Lab
-        </Link>
-        <Link
-          href="/experiments"
-          className="rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-white"
-        >
-          Experiments
-        </Link>
-        <Link
-          href="/"
-          className="rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-white"
-        >
-          About
-        </Link>
-      </SiteHeader>
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-5 pt-6 pb-20 text-center sm:px-8">
-        <p className="text-xs font-medium tracking-[0.18em] text-physics uppercase">Scan to try</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Open the lab on a phone
-        </h1>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-white/60">
-          The code points at the live site. Training still happens in that browser. Nothing is sent to a server.
-        </p>
-        <div className="mt-8 rounded-3xl bg-white p-4 shadow-[0_0_80px_-24px_var(--physics)]">
+      <SiteHeader current="qr" />
+      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-5 py-8 sm:px-10 lg:grid-cols-2">
+        <div>
+          <p className="font-num text-[11px] tracking-[0.18em] text-white/40 uppercase">Neural Physics Lab</p>
+          <h1 className="mt-3 text-[clamp(3.2rem,7vw,6.4rem)] leading-[0.92] font-medium tracking-[-0.07em] text-white">
+            Keep
+            <br />
+            exploring.
+          </h1>
+          <Link
+            href="/lab"
+            className="mt-8 inline-flex h-12 items-center rounded-full bg-physics px-7 text-sm font-semibold text-[#041018]"
+          >
+            Open the Lab
+          </Link>
+          <a
+            href="https://neural-physics-lab-roan.vercel.app"
+            className="mt-6 block font-num text-sm text-white/70 underline-offset-4 hover:underline"
+          >
+            neural-physics-lab-roan.vercel.app
+          </a>
+        </div>
+        <figure className="w-full max-w-md justify-self-start rounded-[28px] bg-[#d7f6ff] p-7 text-[#041820] lg:justify-self-end">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/qr.svg"
             alt="QR code for https://neural-physics-lab-roan.vercel.app"
-            width={320}
-            height={320}
-            className="size-64 sm:size-80"
+            width={420}
+            height={420}
+            className="w-full"
           />
-        </div>
-        <a
-          href="https://neural-physics-lab-roan.vercel.app"
-          className="mt-6 font-num text-sm text-white/80 underline-offset-4 hover:underline"
-        >
-          neural-physics-lab-roan.vercel.app
-        </a>
+          <figcaption className="mt-4 flex justify-between font-num text-[10px] tracking-[0.16em] uppercase">
+            <span>Scan to open</span>
+            <span>Neural Physics Lab</span>
+          </figcaption>
+        </figure>
       </main>
+      <SiteFooter />
     </>
   );
 }

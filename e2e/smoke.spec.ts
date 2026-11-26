@@ -26,13 +26,11 @@ test("landing shows the headline and a live pendulum canvas", async ({ page }) =
   const errors = collectErrors(page);
   await page.goto("/");
 
-  await expect(
-    page.getByRole("heading", { level: 1, name: "AI that learns from the laws of nature" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Learning from chaos." })).toBeVisible();
   await expect(page.getByTestId("pendulum-scene").first()).toBeVisible();
   await expect.poll(() => paintedPixels(page, "pendulum-scene")).toBeGreaterThan(500);
 
-  await page.getByRole("link", { name: "Open the Lab" }).first().click();
+  await page.getByRole("link", { name: "Enter the Lab" }).first().click();
   await expect(page).toHaveURL(/\/lab$/);
   expect(errors).toEqual([]);
 });
@@ -44,8 +42,10 @@ test("lab renders the scene, the controls and a moving simulation", async ({ pag
   const scene = page.getByTestId("pendulum-scene");
   await expect(scene).toBeVisible();
   await expect.poll(() => paintedPixels(page, "pendulum-scene")).toBeGreaterThan(500);
+  await page.getByText("Physics readout", { exact: true }).click();
   await expect(page.getByTestId("energy-chart")).toBeVisible();
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  await page.locator("summary", { hasText: "Sandbox" }).click();
   await expect(page.getByRole("heading", { name: "Sandbox" })).toBeVisible();
 
   // The clock readout advances while the simulation plays.

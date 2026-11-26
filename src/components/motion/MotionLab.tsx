@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  DEFAULT_DT,
   DEFAULT_ORBITAL,
   DEFAULT_PROJECTILE,
+  orbitalEnergy,
   orbitalLaunch,
   orbitalRk4,
   projectileLaunch,
@@ -73,6 +75,8 @@ function MotionLab({ kind }: { kind: Kind }) {
   const [pinnLoss, setPinnLoss] = useState<number[]>([]);
   const [badge, setBadge] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const metersRef = useRef<HTMLDivElement>(null);
+  const referenceRef = useRef<number[]>(kind === "orbital" ? fullOrbit({ ...DEFAULT_ORBITAL }) : []);
   const clientRef = useRef<MlClient | null>(null);
   const cacheRef = useRef<CacheFile | null>(null);
   const workerReady = useRef(false);
@@ -102,6 +106,9 @@ function MotionLab({ kind }: { kind: Kind }) {
     runtime.setRelease(next);
   }, [kind, runtime, launchKey]);
   useEffect(() => runtime.setPlaying(playing), [runtime, playing]);
+  useEffect(() => {
+    if (kind === "orbital") referenceRef.current = fullOrbit(orbital);
+  }, [kind, orbital]);
   useEffect(() => () => clientRef.current?.terminate(), []);
 
   const applyCache = (data: CacheFile) => {
@@ -151,6 +158,7 @@ function MotionLab({ kind }: { kind: Kind }) {
     const context = canvas.getContext("2d");
     if (!context) return;
     let frame = 0;
+    let painted = 0;
     let last = performance.now();
     const draw = () => {
       const rect = canvas.getBoundingClientRect();
@@ -168,8 +176,11 @@ function MotionLab({ kind }: { kind: Kind }) {
       const laneH = h / 3;
       SLOTS.forEach((slot, index) => {
         const top = index * laneH;
-        if (kind === "projectile") drawProjectile(context, runtime, index, slot.color, slot.label, 16, top, w - 32, laneH);
-        else drawOrbit(context, runtime, index, slot.color, slot.label, 16, top, w - 32, laneH);
+        if (kind === "projectile") {
+          drawProjectile(context, runtime, index, slot.color, projectileRef.current, 8, top + 4, w - 16, laneH - 8);
+        } else {
+          drawOrbit(context, runtime, index, slot.color, referenceRef.current, 8, top + 2, w - 16, laneH - 4);
+        }
       });
     };
     const loop = (now: number) => {
@@ -177,6 +188,7 @@ function MotionLab({ kind }: { kind: Kind }) {
       last = now;
       runtime.tick(elapsed);
       draw();
+      if (painted++ % 6 === 0) writeMeters(metersRef.current, runtime, kind, orbitalRef.current);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -283,8 +295,9 @@ function MotionLab({ kind }: { kind: Kind }) {
         : badge;
 
   return (
-    <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-      <SystemSelector active={copy.active} className="lg:col-span-2" />
+    <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col gap-2 px-4 pb-10 sm:px-8">
+      <SystemSelector active={copy.active} />
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <SpotlightCard className="overflow-hidden">
           <div className="h-[520px]">
@@ -295,6 +308,23 @@ function MotionLab({ kind }: { kind: Kind }) {
               role="img"
               aria-label={copy.label}
             />
+          </div>
+          <div ref={metersRef} className="grid grid-cols-3 border-t border-white/10">
+            {SLOTS.map((slot, index) => (
+              <div key={slot.id} data-lane={index} className="min-w-0 px-3 py-2">
+                <p className="truncate text-[10px] tracking-[0.12em] uppercase" style={{ color: slot.color }}>
+                  {slot.label}
+                </p>
+                <p data-err className="font-num text-lg leading-tight text-white">
+                  —
+                </p>
+                {kind === "orbital" && (
+                  <p className="text-[10px] text-white/40">
+                    |ΔE|/|E0| <span data-drift className="font-num text-white/75">—</span>
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
           <div className="flex items-center gap-2 border-t border-white/[0.07] px-4 py-3">
             <Button size="sm" onClick={() => setPlaying((value) => !value)} className="w-[88px]">
@@ -316,7 +346,7 @@ function MotionLab({ kind }: { kind: Kind }) {
             </p>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{copy.residual}</p>
-          <Button className="mt-4 h-11 w-full font-semibold" disabled={status === "training"} onClick={liveTrain}>
+          <Button className="mt-4 h-12 w-full rounded-full font-semibold" disabled={status === "training"} onClick={liveTrain}>
             Live train (~20 s)
           </Button>
           <Button className="mt-2 h-10 w-full" variant="outline" disabled={status === "training"} onClick={usePretrained}>
@@ -422,6 +452,7 @@ function MotionLab({ kind }: { kind: Kind }) {
           )}
         </SpotlightCard>
       </div>
+      </div>
     </main>
   );
 }
@@ -435,29 +466,32 @@ function drawProjectile(
   runtime: MotionRuntime,
   slot: number,
   color: string,
-  label: string,
+  params: { angle: number; speed: number; g: number },
   left: number,
   top: number,
   width: number,
   height: number,
 ) {
   const trail = runtime.trail(slot);
-  let maxX = 4;
-  let maxY = 2;
+  const radians = (params.angle * Math.PI) / 180;
+  const apex = (params.speed * Math.sin(radians)) ** 2 / (2 * params.g);
+  const range = (params.speed * params.speed * Math.sin(2 * radians)) / params.g;
+  let maxX = Math.max(2, range * 0.95);
+  let maxY = Math.max(1, apex * 1.05);
   for (let i = 0; i < trail.length; i += 2) {
     maxX = Math.max(maxX, trail[i]);
     maxY = Math.max(maxY, trail[i + 1]);
   }
-  const ground = top + height * 0.78;
-  const scale = Math.min((width - 36) / (maxX + 0.8), (ground - top - 28) / (maxY + 0.4));
-  const originX = left + 18;
-  context.strokeStyle = "rgba(255,255,255,0.18)";
+  const ground = top + height - 10;
+  const scale = Math.min((width - 20) / (maxX + 0.4), (ground - top - 8) / (maxY + 0.2));
+  const originX = left + 12;
+  context.strokeStyle = "rgba(255,255,255,0.16)";
   context.beginPath();
   context.moveTo(left, ground);
   context.lineTo(left + width, ground);
   context.stroke();
   context.strokeStyle = color;
-  context.lineWidth = 1.6;
+  context.lineWidth = 1.8;
   context.beginPath();
   for (let i = 0; i < trail.length; i += 2) {
     const px = originX + trail[i] * scale;
@@ -474,7 +508,7 @@ function drawProjectile(
   context.arc(originX + state[0] * scale, ground - y * scale, 5, 0, Math.PI * 2);
   context.fill();
   context.globalAlpha = 1;
-  if (state[1] <= 0) {
+  if (state[1] <= 0 && state[0] > 0.05) {
     context.fillStyle = "#f8fafc";
     context.beginPath();
     context.moveTo(originX + state[0] * scale, ground - 8);
@@ -482,9 +516,6 @@ function drawProjectile(
     context.lineTo(originX + state[0] * scale + 5, ground + 2);
     context.fill();
   }
-  context.fillStyle = "rgba(255,255,255,0.72)";
-  context.font = "12px sans-serif";
-  context.fillText(label, left, top + 16);
 }
 
 function drawOrbit(
@@ -492,24 +523,26 @@ function drawOrbit(
   runtime: MotionRuntime,
   slot: number,
   color: string,
-  label: string,
+  reference: number[],
   left: number,
   top: number,
   width: number,
   height: number,
 ) {
   const trail = runtime.trail(slot);
-  let reach = 1.2;
+  let reach = 0.4;
+  for (let i = 0; i < reference.length; i += 2) reach = Math.max(reach, Math.hypot(reference[i], reference[i + 1]));
   for (let i = 0; i < trail.length; i += 2) reach = Math.max(reach, Math.hypot(trail[i], trail[i + 1]));
   const cx = left + width * 0.5;
-  const cy = top + height * 0.55;
-  const scale = Math.min(width, height) * 0.36 / reach;
+  const cy = top + height * 0.5;
+  const scale = (Math.min(width, height) * 0.46) / reach;
   context.fillStyle = "#fde68a";
   context.beginPath();
-  context.arc(cx, cy, 5, 0, Math.PI * 2);
+  context.arc(cx, cy, 4.5, 0, Math.PI * 2);
   context.fill();
+  strokePolyline(context, reference, cx, cy, scale, "rgba(34,211,238,0.38)", 1.2);
   context.strokeStyle = color;
-  context.lineWidth = 1.6;
+  context.lineWidth = 1.8;
   context.beginPath();
   for (let i = 0; i < trail.length; i += 2) {
     const px = cx + trail[i] * scale;
@@ -525,7 +558,74 @@ function drawOrbit(
   context.arc(cx + state[0] * scale, cy - state[1] * scale, 4.5, 0, Math.PI * 2);
   context.fill();
   context.globalAlpha = 1;
-  context.fillStyle = "rgba(255,255,255,0.72)";
-  context.font = "12px sans-serif";
-  context.fillText(label, left, top + 16);
+}
+
+function strokePolyline(
+  context: CanvasRenderingContext2D,
+  points: number[],
+  cx: number,
+  cy: number,
+  scale: number,
+  color: string,
+  width: number,
+) {
+  if (points.length < 4) return;
+  context.beginPath();
+  for (let i = 0; i < points.length; i += 2) {
+    const x = cx + points[i] * scale;
+    const y = cy - points[i + 1] * scale;
+    if (i === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.strokeStyle = color;
+  context.lineWidth = width;
+  context.stroke();
+}
+
+function fullOrbit(params: OrbitalParams): number[] {
+  const state = orbitalLaunch(params);
+  const specific = orbitalEnergy(state, params).total;
+  let period = Math.PI * 2;
+  if (specific < 0) {
+    const semiMajor = -params.gm / (2 * specific);
+    period = Math.PI * 2 * Math.sqrt((semiMajor * semiMajor * semiMajor) / params.gm);
+  }
+  const steps = Math.min(4800, Math.max(8, Math.ceil(period / DEFAULT_DT)));
+  const stride = Math.max(1, Math.floor(steps / 220));
+  const points: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    if (i % stride === 0) points.push(state[0], state[1]);
+    orbitalRk4(state, params, DEFAULT_DT, state);
+  }
+  return points;
+}
+
+function writeMeters(
+  root: HTMLDivElement | null,
+  runtime: MotionRuntime,
+  kind: Kind,
+  orbital: OrbitalParams,
+) {
+  if (!root) return;
+  const physics = runtime.states[0];
+  const initial = kind === "orbital" ? orbitalEnergy(runtime.release, orbital).total : 0;
+  root.querySelectorAll<HTMLElement>("[data-lane]").forEach((lane) => {
+    const slot = Number(lane.dataset.lane);
+    const state = runtime.states[slot];
+    const active = slot === 0 || runtime.active[slot];
+    const error = lane.querySelector("[data-err]");
+    if (error) {
+      error.textContent = active
+        ? `${Math.hypot(state[0] - physics[0], state[1] - physics[1]).toFixed(2)} m`
+        : "—";
+    }
+    const drift = lane.querySelector("[data-drift]");
+    if (drift && kind === "orbital") {
+      if (!active || Math.abs(initial) < 1e-9) drift.textContent = "—";
+      else {
+        const energy = orbitalEnergy(state, orbital).total;
+        drift.textContent = (Math.abs(energy - initial) / Math.abs(initial)).toExponential(1);
+      }
+    }
+  });
 }
