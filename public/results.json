@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T17:06:43.615Z",
+  "generatedAt": "2026-11-26T17:35:25.586Z",
   "backend": "tensorflow",
   "seed": 2026,
   "dt": 0.02,
@@ -9,11 +9,14 @@
     64,
     64
   ],
-  "optimizerSteps": 200,
+  "optimizerSteps": 1300,
   "batchSize": 64,
   "learningRate": 0.001,
+  "learningRateEnd": 0.0001,
   "lambda": 0.4,
-  "rk4MsPerStep": 0.0019306150000011257,
+  "rk4MsPerStep": 0.0019125550000171642,
+  "mseNote": "MSE and MAE are the mean squared and mean absolute error of the state error (Δθ₁, Δθ₂, Δω₁, Δω₂). Angles are in radians and angular velocities are in rad/s, averaged over those four components and over the rollout after t = 0.",
+  "driftNote": "Energy drift is relative: |E(T) − E(0)| / |E(0)|, using the model's own total energy at the start and end of the horizon.",
   "rows": [
     {
       "id": "E1",
@@ -25,16 +28,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 5.343021289760152,
-        "mae": 1.4014492201338808,
-        "energyDrift": 0.350950521304078,
-        "msPerStep": 0.3299168500000064
+        "mse": 4.110539076496278,
+        "mae": 1.1713295011221911,
+        "energyDrift": 0.5435276844016315,
+        "msPerStep": 0.3390749750000396
       },
       "pinn": {
-        "mse": 3.305370598898095,
-        "mae": 1.1282849379354079,
-        "energyDrift": 0.6578991250110651,
-        "msPerStep": 0.32538960000000544
+        "mse": 1.6785890559747798,
+        "mae": 0.7973667804510115,
+        "energyDrift": 0.19540759572638908,
+        "msPerStep": 0.3414289249999456
       },
       "winner": "pinn"
     },
@@ -48,16 +51,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 44.42926253942018,
-        "mae": 2.9259437653807305,
-        "energyDrift": 16.14459510683724,
-        "msPerStep": 0.29070017500002904
+        "mse": 50.051302879687,
+        "mae": 2.650047947431947,
+        "energyDrift": 17.09670173035129,
+        "msPerStep": 0.2957986749999691
       },
       "pinn": {
-        "mse": 4.355509802548087,
-        "mae": 1.129248856066874,
-        "energyDrift": 1.2330874521026973,
-        "msPerStep": 0.31948110000003
+        "mse": 8.226892403451568,
+        "mae": 1.21614778471921,
+        "energyDrift": 1.796825172459309,
+        "msPerStep": 0.32129867499988907
       },
       "winner": "pinn"
     },
@@ -71,16 +74,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 11.490566077580828,
-        "mae": 1.8545260955792864,
-        "energyDrift": 1.0785490365807018,
-        "msPerStep": 0.286246624999967
+        "mse": 7.474750764630764,
+        "mae": 1.5866933121566955,
+        "energyDrift": 0.4689620289279549,
+        "msPerStep": 0.3000207249999221
       },
       "pinn": {
-        "mse": 5.880083276816231,
-        "mae": 1.4759177180163736,
-        "energyDrift": 0.4552950267665144,
-        "msPerStep": 0.3074014499999976
+        "mse": 5.17519411627901,
+        "mae": 0.9576291569893569,
+        "energyDrift": 0.38841430471541616,
+        "msPerStep": 0.3263483999999153
       },
       "winner": "pinn"
     },
@@ -94,16 +97,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 10.172980770557125,
-        "mae": 2.0790975050379554,
-        "energyDrift": 0.35477364518582866,
-        "msPerStep": 0.32801237499998026
+        "mse": 11.153076850298511,
+        "mae": 2.2007886029831782,
+        "energyDrift": 0.27678088518979077,
+        "msPerStep": 0.2996919749999506
       },
       "pinn": {
-        "mse": 2.7997262068026987,
-        "mae": 1.20844254117721,
-        "energyDrift": 0.48070818027502105,
-        "msPerStep": 0.287517224999965
+        "mse": 7.381516110859546,
+        "mae": 1.489011098479575,
+        "energyDrift": 0.3766261245225151,
+        "msPerStep": 0.3201401750000514
       },
       "winner": "pinn"
     },
@@ -117,16 +120,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 1.1763342510336408,
-        "mae": 0.6740851220260811,
-        "energyDrift": 0.3338335919149523,
-        "msPerStep": 0.3299168500000064
+        "mse": 1.4735716337603617,
+        "mae": 0.7266481717705756,
+        "energyDrift": 0.22199341870115094,
+        "msPerStep": 0.3390749750000396
       },
       "pinn": {
-        "mse": 0.8686639044396284,
-        "mae": 0.5619316383149271,
-        "energyDrift": 0.38062901196901305,
-        "msPerStep": 0.32538960000000544
+        "mse": 0.6782400603782908,
+        "mae": 0.5172435385031713,
+        "energyDrift": 0.147929706857741,
+        "msPerStep": 0.3414289249999456
       },
       "winner": "pinn"
     },
@@ -140,16 +143,16 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 11.849938187128037,
-        "mae": 1.8322902433132944,
-        "energyDrift": 0.6482909536041482,
-        "msPerStep": 0.3299168500000064
+        "mse": 10.38757076190269,
+        "mae": 1.7468379807752101,
+        "energyDrift": 0.7978928385764894,
+        "msPerStep": 0.3390749750000396
       },
       "pinn": {
-        "mse": 5.3052846257941075,
-        "mae": 1.395846695212493,
-        "energyDrift": 0.6097492807964136,
-        "msPerStep": 0.32538960000000544
+        "mse": 2.5959255554223524,
+        "mae": 0.9555840316694473,
+        "energyDrift": 0.17002867642840408,
+        "msPerStep": 0.3414289249999456
       },
       "winner": "pinn"
     },
@@ -163,19 +166,55 @@
       "basePairs": 1200,
       "testTrajectories": 4,
       "nn": {
-        "mse": 39.133534337557464,
-        "mae": 3.200161291750822,
-        "energyDrift": 3.640432274073323,
-        "msPerStep": 0.3299168500000064
+        "mse": 19.9722271952234,
+        "mae": 2.626376509357331,
+        "energyDrift": 0.7738111641963012,
+        "msPerStep": 0.3390749750000396
       },
       "pinn": {
-        "mse": 7.117690084364215,
-        "mae": 1.8125681956517394,
-        "energyDrift": 1.4410073253260345,
-        "msPerStep": 0.32538960000000544
+        "mse": 7.609917415584791,
+        "mae": 1.6089263279392911,
+        "energyDrift": 0.5196736121343879,
+        "msPerStep": 0.3414289249999456
       },
       "winner": "pinn"
     }
   ],
-  "takeaway": "On the full dataset PINN has the lower rollout MSE (3.305 against 5.343); with 5% of the data the PINN rollout MSE is 10.2× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×33, PINN ×8 from 1 s), which a chaotic pendulum is expected to do."
+  "seeds": [
+    {
+      "id": "E1",
+      "name": "Standard conditions",
+      "seeds": [
+        2026,
+        7,
+        42
+      ],
+      "nnMseMean": 2.945776098713754,
+      "nnMseStd": 1.189497939106678,
+      "pinnMseMean": 2.396962580830285,
+      "pinnMseStd": 0.6821814818408419,
+      "nnDriftMean": 0.37683426052133634,
+      "nnDriftStd": 0.2129901808595879,
+      "pinnDriftMean": 0.211410439205336,
+      "pinnDriftStd": 0.03216850878687292
+    },
+    {
+      "id": "E2-5",
+      "name": "Limited data, 5%",
+      "seeds": [
+        2026,
+        7,
+        42
+      ],
+      "nnMseMean": 19.077339462976564,
+      "nnMseStd": 26.83893611813957,
+      "pinnMseMean": 5.983026148835681,
+      "pinnMseStd": 3.11361191625591,
+      "nnDriftMean": 6.232749348745087,
+      "nnDriftStd": 9.420739647748446,
+      "pinnDriftMean": 1.0092319106038266,
+      "pinnDriftStd": 0.6902795311504129
+    }
+  ],
+  "takeaway": "On the full dataset PINN has the lower rollout MSE (1.679 against 4.111); with 5% of the data the PINN rollout MSE is 6.1× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×14, PINN ×11 from 1 s), which a chaotic pendulum is expected to do. Across seeds 2026, 7, 42, E1 PINN MSE is 2.397 ± 0.682 (standard NN 2.946 ± 1.189) and the 5% PINN MSE is 5.983 ± 3.114 (standard NN 19.077 ± 26.839)."
 }

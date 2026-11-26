@@ -36,7 +36,24 @@ export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {
     }
     ctx.stroke();
 
-    const finite = [...nn, ...pinn].filter((value) => Number.isFinite(value) && value > 0);
+    const smooth = (series: number[]) => {
+      const out: number[] = [];
+      let acc = series.find((value) => Number.isFinite(value) && value > 0) ?? 1;
+      for (const value of series) {
+        if (!Number.isFinite(value) || value <= 0) {
+          out.push(acc);
+          continue;
+        }
+        acc = 0.18 * value + 0.82 * acc;
+        out.push(acc);
+      }
+      return out;
+    };
+    const nnSmooth = smooth(nn);
+    const pinnSmooth = smooth(pinn);
+    const finite = [...nn, ...pinn, ...nnSmooth, ...pinnSmooth].filter(
+      (value) => Number.isFinite(value) && value > 0,
+    );
     if (finite.length === 0) return;
     const log = (value: number) => Math.log10(Math.max(value, 1e-5));
     let low = log(Math.min(...finite));
@@ -48,11 +65,14 @@ export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {
     }
     const span = Math.max(nn.length, pinn.length, 2) - 1;
 
-    const stroke = (series: number[], color: string) => {
+    const stroke = (series: number[], color: string, width: number, alpha: number) => {
       if (series.length === 0) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.7;
+      ctx.lineWidth = width;
       ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.beginPath();
       let moved = false;
       for (let i = 0; i < series.length; i++) {
@@ -66,16 +86,19 @@ export function LossChart({ nn, pinn }: { nn: number[]; pinn: number[] }) {
         } else ctx.lineTo(x, y);
       }
       ctx.stroke();
+      ctx.restore();
     };
-    stroke(nn, NN);
-    stroke(pinn, PINN);
+    stroke(nn, NN, 1, 0.28);
+    stroke(pinn, PINN, 1, 0.28);
+    stroke(nnSmooth, NN, 2.1, 1);
+    stroke(pinnSmooth, PINN, 2.1, 1);
   }, [nn, pinn]);
 
   return (
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label="Data loss of the standard NN in amber and the PINN in violet"
+      aria-label="Smoothed data loss of the standard NN in amber and the PINN in violet, with the raw loss drawn faintly"
       data-testid="loss-chart"
       className="block h-full w-full"
     />

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { SystemSelector } from "@/components/systems/SystemSelector";
 import { MlClient } from "@/ml/client";
 import type { ExperimentId } from "@/ml/messages";
-import { formatMetric, takeaway, type ResultRow, type ResultsFile } from "@/ml/results";
+import { EXPERIMENT_STEPS } from "@/ml/constants";
+import { DRIFT_NOTE, formatMetric, MSE_NOTE, takeaway, type ResultRow, type ResultsFile } from "@/ml/results";
+import { MseChart } from "./MseChart";
 import type { TrainProgress } from "@/ml/train";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +109,7 @@ export function ExperimentCenter() {
           return {
             ...base,
             rows: merged,
-            takeaway: takeaway(merged),
+            takeaway: takeaway(merged, base.seeds ?? []),
             generatedAt: new Date().toISOString(),
             backend: client.backend ?? base.backend,
           };
@@ -157,7 +159,13 @@ export function ExperimentCenter() {
             {results.rk4MsPerStep > 0
               ? ` · RK4 ${formatMetric(results.rk4MsPerStep)} ms per step`
               : ""}
-            . Winner is the lower rollout MSE. A gap under 2% is a tie.
+            . {MSE_NOTE} {DRIFT_NOTE} Winner is the lower rollout MSE. A gap under 2% is a tie.
+            Live re-runs use {EXPERIMENT_STEPS} steps so the page stays responsive. The loaded
+            numbers used {results.optimizerSteps} steps
+            {results.learningRateEnd
+              ? `, cosine learning rate ${results.learningRate} to ${results.learningRateEnd}`
+              : ""}
+            .
           </p>
         )}
         {progress && running && (
@@ -189,6 +197,12 @@ export function ExperimentCenter() {
         ))}
       </div>
 
+      {results && results.rows.length > 0 && (
+        <SpotlightCard className="p-5 sm:p-6">
+          <MseChart rows={results.rows} />
+        </SpotlightCard>
+      )}
+
       <SpotlightCard className="overflow-hidden">
         <div className="overflow-x-auto">
           <table data-testid="results-table" className="w-full min-w-[860px] border-collapse text-left text-xs">
@@ -196,12 +210,12 @@ export function ExperimentCenter() {
               <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/45 uppercase">
                 <th className="px-4 py-3 font-medium">Experiment</th>
                 <th className="px-3 py-3 font-medium">Setting</th>
-                <th className="px-3 py-3 font-medium">NN MSE</th>
-                <th className="px-3 py-3 font-medium">PINN MSE</th>
-                <th className="px-3 py-3 font-medium">NN MAE</th>
-                <th className="px-3 py-3 font-medium">PINN MAE</th>
-                <th className="px-3 py-3 font-medium">NN drift</th>
-                <th className="px-3 py-3 font-medium">PINN drift</th>
+                <th className="px-3 py-3 font-medium" title={MSE_NOTE}>NN MSE</th>
+                <th className="px-3 py-3 font-medium" title={MSE_NOTE}>PINN MSE</th>
+                <th className="px-3 py-3 font-medium" title={MSE_NOTE}>NN MAE</th>
+                <th className="px-3 py-3 font-medium" title={MSE_NOTE}>PINN MAE</th>
+                <th className="px-3 py-3 font-medium" title={DRIFT_NOTE}>NN |ΔE|/|E0|</th>
+                <th className="px-3 py-3 font-medium" title={DRIFT_NOTE}>PINN |ΔE|/|E0|</th>
                 <th className="px-3 py-3 font-medium">NN ms</th>
                 <th className="px-3 py-3 font-medium">PINN ms</th>
                 <th className="px-4 py-3 font-medium">Winner</th>
@@ -251,6 +265,61 @@ export function ExperimentCenter() {
             </tbody>
           </table>
         </div>
+      </SpotlightCard>
+
+      {results?.seeds && results.seeds.length > 0 && (
+        <SpotlightCard className="p-5 sm:p-6">
+          <div data-testid="seed-sweep">
+          <h2 className="text-sm font-semibold tracking-tight text-white">Seed sweep</h2>
+          <p className="mt-1 text-xs leading-relaxed text-white/55">
+            Same budget on seeds {results.seeds[0]?.seeds.join(", ")}. Mean ± sample standard deviation.
+            MSE is state error in radians and rad/s. Drift is |ΔE|/|E0|.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/45 uppercase">
+                  <th className="py-2 pr-3 font-medium">Run</th>
+                  <th className="px-3 py-2 font-medium">NN MSE</th>
+                  <th className="px-3 py-2 font-medium">PINN MSE</th>
+                  <th className="px-3 py-2 font-medium">NN |ΔE|/|E0|</th>
+                  <th className="px-3 py-2 font-medium">PINN |ΔE|/|E0|</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.seeds.map((item) => (
+                  <tr key={item.id} className="border-b border-white/[0.06] last:border-0">
+                    <td className="py-2.5 pr-3 font-medium text-white">{item.name}</td>
+                    <td className="font-num px-3 py-2.5 text-nn">
+                      {formatMetric(item.nnMseMean)} ± {formatMetric(item.nnMseStd)}
+                    </td>
+                    <td className="font-num px-3 py-2.5 text-pinn">
+                      {formatMetric(item.pinnMseMean)} ± {formatMetric(item.pinnMseStd)}
+                    </td>
+                    <td className="font-num px-3 py-2.5 text-white/70">
+                      {formatMetric(item.nnDriftMean)} ± {formatMetric(item.nnDriftStd)}
+                    </td>
+                    <td className="font-num px-3 py-2.5 text-white/70">
+                      {formatMetric(item.pinnDriftMean)} ± {formatMetric(item.pinnDriftStd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          </div>
+        </SpotlightCard>
+      )}
+
+      <SpotlightCard className="p-5 sm:p-6">
+        <h2 className="text-sm font-semibold tracking-tight text-white">Limitations and next steps</h2>
+        <ul className="mt-3 grid gap-2 text-sm leading-relaxed text-white/65 sm:grid-cols-2">
+          <li>A chaotic pendulum leaves any one-step model behind. By 10 s both rollouts have grown, and that is expected.</li>
+          <li>The network predicts a single step of 0.02 s and is rolled out by feeding its own output back in, so small errors accumulate.</li>
+          <li>One TensorFlow step is far slower than an RK4 step. The gap is call overhead, not a claim that the solver is the product.</li>
+          <li>Spring-mass, projectile, and orbital motion are placeholders. The weights belong to the masses and lengths they were trained on.</li>
+          <li>Next: a Hamiltonian network or a neural ODE, more physical systems behind the same interface, and training on a trajectory the user records.</li>
+        </ul>
       </SpotlightCard>
     </div>
   );

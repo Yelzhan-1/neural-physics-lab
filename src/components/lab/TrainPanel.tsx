@@ -95,6 +95,7 @@ export function TrainPanel({ models }: { models: LabModels }) {
             <span className="h-0.5 w-3 rounded-full bg-pinn" />
             PINN
           </span>
+          <span className="text-white/40">smoothed · raw behind</span>
           <span className="ml-auto font-num text-white/70">
             {progress
               ? `${progress.model === "nn" ? "NN" : "PINN"} ${progress.step}/${progress.steps}`

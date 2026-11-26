@@ -4,6 +4,7 @@ import {
   BATCH_SIZE,
   HIDDEN_UNITS,
   LEARNING_RATE,
+  LEARNING_RATE_END,
   NORM,
 } from "./constants";
 import type { Dataset } from "./dataset";
@@ -34,6 +35,8 @@ export interface TrainOptions {
   steps: number;
   batchSize?: number;
   learningRate?: number;
+  /** End of the cosine decay. Equal to `learningRate` disables the decay. */
+  learningRateEnd?: number;
   /** Same schedule seed for both models, so they see the same minibatches. */
   scheduleSeed: number;
   onProgress?: (progress: TrainProgress) => void;
@@ -54,6 +57,13 @@ function as2d(value: tf.Tensor | tf.Tensor[] | tf.SymbolicTensor | tf.SymbolicTe
 /** Layer weights wrap a core `Variable`. The optimizer updates that inner tensor. */
 function variablesOf(model: tf.LayersModel): tf.Variable[] {
   return model.trainableWeights.map((weight) => (weight as unknown as { val: tf.Variable }).val);
+}
+
+/** Cosine from `start` at step 0 to `end` at the last step. Both models share it. */
+export function cosineLearningRate(step: number, steps: number, start: number, end: number): number {
+  if (steps <= 1) return end;
+  const t = Math.min(Math.max(step, 0), steps - 1) / (steps - 1);
+  return end + 0.5 * (start - end) * (1 + Math.cos(Math.PI * t));
 }
 
 export function createModel(initSeed: number, hidden: readonly number[] = HIDDEN_UNITS): tf.Sequential {
@@ -170,6 +180,7 @@ export async function trainModel(
 ): Promise<{ dataLoss: number; physicsLoss: number; totalLoss: number }> {
   const batchSize = options.batchSize ?? BATCH_SIZE;
   const learningRate = options.learningRate ?? LEARNING_RATE;
+  const learningRateEnd = options.learningRateEnd ?? LEARNING_RATE_END;
   const optimizer = tf.train.adam(learningRate);
   const tensors = pairTensors(dataset);
   const deltaScale = tf.tensor1d([NORM.dTheta, NORM.dTheta, NORM.dOmega, NORM.dOmega]);
@@ -184,8 +195,16 @@ export async function trainModel(
   let totalLoss = Number.NaN;
   const kept: { data: tf.Tensor | null; phys: tf.Tensor | null } = { data: null, phys: null };
   try {
+    const yieldEvery = options.steps > 400 ? 20 : 4;
     for (let step = 0; step < options.steps; step++) {
       if (options.shouldStop?.()) break;
+      // Adam reads this number on every step. The node build has no setLearningRate.
+      (optimizer as unknown as { learningRate: number }).learningRate = cosineLearningRate(
+        step,
+        options.steps,
+        learningRate,
+        learningRateEnd,
+      );
       const total = optimizer.minimize(() => {
         const losses = lossFor(
           model,
@@ -224,7 +243,7 @@ export async function trainModel(
         physicsLoss: options.physics ? physicsLoss : null,
         totalLoss,
       });
-      if ((step + 1) % 4 === 0) {
+      if ((step + 1) % yieldEvery === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

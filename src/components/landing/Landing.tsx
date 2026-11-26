@@ -7,6 +7,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { PendulumScene } from "@/components/scene/PendulumScene";
 import { SLOTS, type SlotId } from "@/components/scene/runtime";
 import { useLabRuntime } from "@/components/scene/useLabRuntime";
+import { ResultsStrip } from "@/components/landing/ResultsStrip";
 import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { cn } from "@/lib/utils";
 
@@ -292,8 +293,32 @@ export function Landing() {
         </section>
       </div>
 
-      <footer className="border-t border-white/[0.06] px-5 py-8 text-center text-xs text-white/40">
-        Neural Physics Lab · KIMEP AI Challenge 2026 · Everything runs in your browser
+      <ResultsStrip />
+
+      <footer className="border-t border-white/[0.06] px-5 py-8">
+        <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-5 sm:flex-row sm:items-center">
+          <p className="text-center text-xs text-white/40 sm:text-left">
+            Neural Physics Lab · KIMEP AI Challenge 2026 · Everything runs in your browser
+          </p>
+          <Link
+            href="/qr"
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] py-2 pr-4 pl-2 transition-colors hover:border-white/25"
+          >
+            {/* The mark is generated into public/qr.svg. A white plate keeps the dark modules scannable. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/qr.svg"
+              alt=""
+              width={64}
+              height={64}
+              className="size-16 rounded-lg bg-white p-1"
+            />
+            <span className="text-left">
+              <span className="block text-sm font-medium text-white">Scan to try</span>
+              <span className="mt-0.5 block text-[11px] text-white/45">neural-physics-lab-roan.vercel.app</span>
+            </span>
+          </Link>
+        </div>
       </footer>
     </main>
   );

@@ -19,6 +19,28 @@ export interface ResultRow {
   winner: Winner;
 }
 
+export interface SeedSummary {
+  id: "E1" | "E2-5";
+  name: string;
+  seeds: number[];
+  nnMseMean: number;
+  nnMseStd: number;
+  pinnMseMean: number;
+  pinnMseStd: number;
+  nnDriftMean: number;
+  nnDriftStd: number;
+  pinnDriftMean: number;
+  pinnDriftStd: number;
+}
+
+/** What the MSE number means. Stored with the results so a reader does not have to guess. */
+export const MSE_NOTE =
+  "MSE and MAE are the mean squared and mean absolute error of the state error (Δθ₁, Δθ₂, Δω₁, Δω₂). Angles are in radians and angular velocities are in rad/s, averaged over those four components and over the rollout after t = 0.";
+
+/** What the energy-drift number means. */
+export const DRIFT_NOTE =
+  "Energy drift is relative: |E(T) − E(0)| / |E(0)|, using the model's own total energy at the start and end of the horizon.";
+
 export interface ResultsFile {
   version: 1;
   generatedAt: string;
@@ -29,10 +51,52 @@ export interface ResultsFile {
   optimizerSteps: number;
   batchSize: number;
   learningRate: number;
+  learningRateEnd?: number;
   lambda: number;
   rk4MsPerStep: number;
+  mseNote?: string;
+  driftNote?: string;
   rows: ResultRow[];
+  seeds?: SeedSummary[];
   takeaway: string;
+}
+
+export function meanStd(values: number[]): { mean: number; std: number } {
+  const n = values.length;
+  if (n === 0) return { mean: Number.NaN, std: Number.NaN };
+  let sum = 0;
+  for (const value of values) sum += value;
+  const mean = sum / n;
+  if (n === 1) return { mean, std: 0 };
+  let square = 0;
+  for (const value of values) {
+    const delta = value - mean;
+    square += delta * delta;
+  }
+  return { mean, std: Math.sqrt(square / (n - 1)) };
+}
+
+export function seedSummary(id: SeedSummary["id"], name: string, seeds: number[], rows: ResultRow[]): SeedSummary {
+  if (seeds.length !== rows.length || rows.length === 0) {
+    throw new RangeError("seed summary needs one row per seed");
+  }
+  const nnMse = meanStd(rows.map((row) => row.nn.mse));
+  const pinnMse = meanStd(rows.map((row) => row.pinn.mse));
+  const nnDrift = meanStd(rows.map((row) => row.nn.energyDrift));
+  const pinnDrift = meanStd(rows.map((row) => row.pinn.energyDrift));
+  return {
+    id,
+    name,
+    seeds,
+    nnMseMean: nnMse.mean,
+    nnMseStd: nnMse.std,
+    pinnMseMean: pinnMse.mean,
+    pinnMseStd: pinnMse.std,
+    nnDriftMean: nnDrift.mean,
+    nnDriftStd: nnDrift.std,
+    pinnDriftMean: pinnDrift.mean,
+    pinnDriftStd: pinnDrift.std,
+  };
 }
 
 /** Lower MSE wins. Within 2% of the larger value, call it a tie. */
@@ -59,8 +123,12 @@ function findRow(rows: ResultRow[], id: string): ResultRow | undefined {
   return rows.find((row) => row.id === id);
 }
 
-/** One or two sentences, using only the numbers in `rows`. */
-export function takeaway(rows: ResultRow[]): string {
+function plusMinus(mean: number, std: number): string {
+  return `${formatMetric(mean)} ± ${formatMetric(std)}`;
+}
+
+/** One or two sentences, using only the numbers in `rows` and, when present, the seed sweep. */
+export function takeaway(rows: ResultRow[], seeds: SeedSummary[] = []): string {
   const e1 = findRow(rows, "E1");
   const e2 = findRow(rows, "E2-5");
   const e3 = findRow(rows, "E3");
@@ -89,7 +157,12 @@ export function takeaway(rows: ResultRow[]): string {
 
   const nnGrowth = long.nn.mse / Math.max(short.nn.mse, 1e-12);
   const pinnGrowth = long.pinn.mse / Math.max(short.pinn.mse, 1e-12);
-  return `${full}; ${limited}, and ${unseen}. By 10 s both errors have grown (standard NN ×${nnGrowth.toFixed(0)}, PINN ×${pinnGrowth.toFixed(0)} from 1 s), which a chaotic pendulum is expected to do.`;
+  const base = `${full}; ${limited}, and ${unseen}. By 10 s both errors have grown (standard NN ×${nnGrowth.toFixed(0)}, PINN ×${pinnGrowth.toFixed(0)} from 1 s), which a chaotic pendulum is expected to do.`;
+  const e1Seeds = seeds.find((item) => item.id === "E1");
+  const e2Seeds = seeds.find((item) => item.id === "E2-5");
+  if (!e1Seeds || !e2Seeds) return base;
+  const listed = e1Seeds.seeds.join(", ");
+  return `${base} Across seeds ${listed}, E1 PINN MSE is ${plusMinus(e1Seeds.pinnMseMean, e1Seeds.pinnMseStd)} (standard NN ${plusMinus(e1Seeds.nnMseMean, e1Seeds.nnMseStd)}) and the 5% PINN MSE is ${plusMinus(e2Seeds.pinnMseMean, e2Seeds.pinnMseStd)} (standard NN ${plusMinus(e2Seeds.nnMseMean, e2Seeds.nnMseStd)}).`;
 }
 
 export function formatResultsMarkdown(results: ResultsFile): string {
@@ -99,18 +172,35 @@ export function formatResultsMarkdown(results: ResultsFile): string {
     results.takeaway,
     "",
     `Generated ${results.generatedAt} on the \`${results.backend}\` backend.`,
-    `Seed ${results.seed}, dt ${results.dt} s, hidden layers [${results.hidden.join(", ")}], ${results.optimizerSteps} optimizer steps, batch ${results.batchSize}, learning rate ${results.learningRate}, λ ${results.lambda}.`,
+    `Seed ${results.seed}, dt ${results.dt} s, hidden layers [${results.hidden.join(", ")}], ${results.optimizerSteps} optimizer steps, batch ${results.batchSize}, learning rate ${results.learningRate} cosine to ${results.learningRateEnd ?? results.learningRate}, λ ${results.lambda}.`,
     `RK4 reference speed: ${formatMetric(results.rk4MsPerStep)} ms per model step.`,
+    "",
+    results.mseNote ?? MSE_NOTE,
+    results.driftNote ?? DRIFT_NOTE,
     "",
     "Errors are autoregressive rollout error against RK4, not one-step error. The winner is the lower rollout MSE. A gap under 2% is a tie.",
     "",
-    "| Experiment | Setting | Horizon | Train pairs | NN MSE | PINN MSE | NN MAE | PINN MAE | NN energy drift | PINN energy drift | NN ms/step | PINN ms/step | Winner |",
+    "| Experiment | Setting | Horizon | Train pairs | NN MSE | PINN MSE | NN MAE | PINN MAE | NN \\|ΔE\\|/\\|E0\\| | PINN \\|ΔE\\|/\\|E0\\| | NN ms/step | PINN ms/step | Winner |",
     "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
   ];
   for (const row of results.rows) {
     lines.push(
       `| ${row.name} | ${row.setting} | ${row.horizonSeconds} s | ${row.trainPairs} | ${formatMetric(row.nn.mse)} | ${formatMetric(row.pinn.mse)} | ${formatMetric(row.nn.mae)} | ${formatMetric(row.pinn.mae)} | ${formatMetric(row.nn.energyDrift)} | ${formatMetric(row.pinn.energyDrift)} | ${formatMetric(row.nn.msPerStep)} | ${formatMetric(row.pinn.msPerStep)} | ${row.winner === "tie" ? "tie" : row.winner === "nn" ? "Standard NN" : "PINN"} |`,
     );
+  }
+  if (results.seeds && results.seeds.length > 0) {
+    lines.push(
+      "",
+      "Seed sweep, same budget, sample standard deviation (n − 1):",
+      "",
+      "| Run | Seeds | NN MSE | PINN MSE | NN \\|ΔE\\|/\\|E0\\| | PINN \\|ΔE\\|/\\|E0\\| |",
+      "| --- | --- | --- | --- | --- | --- |",
+    );
+    for (const item of results.seeds) {
+      lines.push(
+        `| ${item.name} | ${item.seeds.join(", ")} | ${plusMinus(item.nnMseMean, item.nnMseStd)} | ${plusMinus(item.pinnMseMean, item.pinnMseStd)} | ${plusMinus(item.nnDriftMean, item.nnDriftStd)} | ${plusMinus(item.pinnDriftMean, item.pinnDriftStd)} |`,
+      );
+    }
   }
   lines.push("");
   return lines.join("\n");

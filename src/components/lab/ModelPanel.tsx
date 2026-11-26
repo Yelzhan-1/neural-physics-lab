@@ -153,7 +153,7 @@ export function ModelPanel({ runtime }: { runtime: LabRuntime }) {
       <SpotlightCard className="p-5 sm:p-6">
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold tracking-tight text-white">Model readout</h2>
-          <p className="text-xs text-muted-foreground">Tip error against RK4, and energy drift</p>
+          <p className="text-xs text-muted-foreground">Tip error against RK4, and relative energy drift |ΔE|/|E0|</p>
         </header>
         <div className="grid gap-3 sm:grid-cols-2">
           {[1, 2].map((slot) => (
@@ -170,7 +170,7 @@ export function ModelPanel({ runtime }: { runtime: LabRuntime }) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Energy drift</dt>
+                  <dt className="text-muted-foreground">|ΔE|/|E0|</dt>
                   <dd data-model={(slot - 1) * 2 + 1} className="font-num mt-0.5 text-white">
                     —
                   </dd>

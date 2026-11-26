@@ -1,10 +1,15 @@
 import { energy, type PendulumParams } from "../engine";
 
 export interface ModelMetrics {
-  /** Mean squared error of the autoregressive rollout against RK4. */
+  /**
+   * Mean squared state error against RK4.
+   * Each sample averages (Δθ₁² + Δθ₂² + Δω₁² + Δω₂²) / 4,
+   * with angles in radians and angular velocities in rad/s.
+   */
   mse: number;
+  /** Mean absolute state error, same components and units as `mse`. */
   mae: number;
-  /** |E(T) − E(0)| / max(|E(0)|, 1e-3) at the end of the horizon. */
+  /** Relative energy drift |E(T) − E(0)| / |E(0)| at the end of the horizon. */
   energyDrift: number;
   /** Wall time to advance one model step, milliseconds. */
   msPerStep: number;
@@ -48,7 +53,7 @@ export function trajectoryError(
   return {
     mse: squared / count,
     mae: absolute / count,
-    energyDrift: Math.abs(final - initial) / Math.max(Math.abs(initial), 1e-3),
+    energyDrift: Math.abs(final - initial) / Math.max(Math.abs(initial), 1e-9),
   };
 }
 
