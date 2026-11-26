@@ -35,10 +35,18 @@ function sameParams(a: PendulumParams, b: PendulumParams): boolean {
   return a.m1 === b.m1 && a.m2 === b.m2 && a.l1 === b.l1 && a.l2 === b.l2 && a.g === b.g && a.damping === b.damping;
 }
 
+function canonicalSystem(system: string): string {
+  if (system === "spring" || system === "spring-mass") return "spring";
+  if (system === "projectile") return "projectile";
+  if (system === "orbital") return "orbital";
+  return "pendulum";
+}
+
 export function Lab({ demo = false, system = "pendulum" }: { demo?: boolean; system?: string }) {
-  if (system === "spring") return <SpringLab />;
-  if (system === "projectile") return <ProjectileLab />;
-  if (system === "orbital") return <OrbitalLab />;
+  const id = canonicalSystem(system);
+  if (id === "spring") return <SpringLab />;
+  if (id === "projectile") return <ProjectileLab />;
+  if (id === "orbital") return <OrbitalLab />;
   return <PendulumLab demo={demo} />;
 }
 

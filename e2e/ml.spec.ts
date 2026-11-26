@@ -16,7 +16,7 @@ test("landing describes the four experiments and the trainable models", async ({
   await expect(page.getByText("6.1× lower error at 5% data — seed 2026")).toBeVisible();
   await expect(page.getByText("3-seed mean ≈ 3.2×")).toBeVisible();
   for (const name of ["Double pendulum", "Spring-mass", "Projectile with drag", "Orbital motion"]) {
-    await expect(page.getByRole("link", { name })).toBeVisible();
+    await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("link", { name: "Enter the Lab" }).first()).toBeVisible();
   expect(errors).toEqual([]);
@@ -142,6 +142,28 @@ test("orbital use pretrained restores the reference launch", async ({ page }) =>
   await page.getByRole("button", { name: "Use pretrained" }).click();
   await expect(radius).toHaveValue("1");
   expect(errors).toEqual([]);
+});
+
+test("system previews deep link into the matching lab", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/");
+  await expect(page.getByTestId("mini-orbital")).toBeVisible();
+  await page.getByTestId("mini-orbital").click();
+  await expect(page).toHaveURL(/system=orbital/);
+  await expect(page.getByRole("button", { name: "Orbital motion" })).toHaveAttribute("aria-current", "true");
+  await page.goto("/lab?system=double-pendulum");
+  await expect(page.getByRole("heading", { name: "Double pendulum" })).toBeVisible();
+  await page.goto("/lab?system=spring-mass");
+  await expect(page.getByRole("button", { name: "Spring-mass" })).toHaveAttribute("aria-current", "true");
+  expect(errors).toEqual([]);
+});
+
+test("the live train bar stays on the lab", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Live train (~20 s)" })).toHaveCount(0);
+  await page.goto("/experiments");
+  await expect(page.getByRole("button", { name: "Live train (~20 s)" })).toHaveCount(0);
 });
 
 test("mobile dock keeps live train on screen", async ({ page }) => {

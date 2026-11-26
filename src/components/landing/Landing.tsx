@@ -3,12 +3,13 @@
 import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { SystemGrid } from "@/components/landing/SystemGrid";
 import { TrailArt } from "@/components/landing/TrailArt";
 import { SYSTEMS } from "@/ml/systems";
 
 const HREF: Record<string, string> = {
-  "double-pendulum": "/lab",
-  "spring-mass": "/lab?system=spring",
+  "double-pendulum": "/lab?system=double-pendulum",
+  "spring-mass": "/lab?system=spring-mass",
   projectile: "/lab?system=projectile",
   orbital: "/lab?system=orbital",
 };
@@ -137,7 +138,7 @@ export function Landing() {
       </section>
 
       <section className="grid h-full snap-start items-end gap-6 px-5 py-8 lg:grid-cols-2 lg:items-center sm:px-10">
-        <div className="order-2 max-w-lg">
+        <div className="order-2 max-w-lg lg:order-1 lg:justify-self-start">
           <p className="font-num text-[11px] tracking-[0.16em] text-pinn uppercase">PINN</p>
           <h2 className="mt-3 text-[clamp(2.6rem,5.4vw,4.8rem)] leading-[0.94] font-medium tracking-[-0.06em] text-foreground">
             The laws stay in the loss.
@@ -180,27 +181,32 @@ export function Landing() {
         </div>
       </section>
 
-      <section className="flex h-full snap-start flex-col justify-center px-5 sm:px-10">
-        <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">The lab</p>
-        <h2 className="mt-3 text-[clamp(2.8rem,6vw,5.2rem)] leading-none font-medium tracking-[-0.06em] text-foreground">
-          Four systems.
-        </h2>
-        <ul className="mt-8 max-w-xl border-b border-hairline">
-          {SYSTEMS.map((system) => (
-            <li key={system.id} className="border-t border-hairline">
-              <Link
-                href={HREF[system.id] ?? "/lab"}
-                className="flex items-baseline justify-between gap-4 py-3 text-xl tracking-tight text-foreground hover:text-pinn sm:text-2xl"
-              >
-                <span>{system.name}</span>
-                <span className="font-num text-xs text-muted-foreground">{system.code}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <section className="grid h-full snap-start items-center gap-8 overflow-y-auto px-5 py-8 sm:px-10 lg:grid-cols-2">
+        <div>
+          <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">The lab</p>
+          <h2 className="mt-3 text-[clamp(2.6rem,5.4vw,4.8rem)] leading-[0.94] font-medium tracking-[-0.06em] text-foreground">
+            Four systems.
+          </h2>
+          <ul className="mt-6 max-w-xl border-b border-hairline">
+            {SYSTEMS.map((system) => (
+              <li key={system.id} className="border-t border-hairline">
+                <Link
+                  href={HREF[system.id] ?? "/lab"}
+                  className="flex items-baseline justify-between gap-4 py-3 text-xl tracking-tight text-foreground hover:text-pinn sm:text-2xl"
+                >
+                  <span>{system.name}</span>
+                  <span aria-hidden="true" className="font-num text-xs text-muted-foreground">
+                    {system.code}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <SystemGrid />
       </section>
 
-      <section className="grid h-full snap-start content-center gap-10 px-5 sm:px-10 lg:grid-cols-2 lg:items-center">
+      <section className="grid h-full snap-start items-end gap-6 px-5 py-8 sm:px-10 lg:grid-cols-2 lg:items-center">
         <div>
           <p className="font-num text-[11px] tracking-[0.16em] text-muted-foreground uppercase">Neural Physics Lab</p>
           <h2 className="mt-3 text-[clamp(3rem,7vw,6rem)] leading-[0.92] font-medium tracking-[-0.07em] text-foreground">
