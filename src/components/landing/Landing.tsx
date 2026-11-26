@@ -80,7 +80,7 @@ export function Landing() {
             trailWidth={2.2}
             ariaLabel="Live double pendulum simulated by the physics engine"
           />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_62%_46%_at_50%_52%,rgb(4_5_13/82%),rgb(4_5_13/38%)_58%,transparent_82%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_52%_at_50%_46%,rgb(4_5_13/94%),rgb(4_5_13/72%)_42%,transparent_78%)]" />
         </motion.div>
 
         <motion.div
@@ -111,7 +111,7 @@ export function Landing() {
 
           <motion.p
             variants={rise}
-            className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-white/70 sm:text-lg"
+            className="mt-7 max-w-2xl rounded-2xl text-base leading-relaxed text-pretty text-white/80 [text-shadow:0_1px_18px_rgb(4_5_13)] sm:text-lg max-sm:bg-[#04050d]/80 max-sm:px-4 max-sm:py-2.5 max-sm:ring-1 max-sm:ring-white/10 max-sm:backdrop-blur-md"
           >
             Does AI predict motion better when it learns the laws of physics, not only data? We
             put the question to a double pendulum, the same mathematics that moves a two-link
@@ -275,9 +275,18 @@ export function Landing() {
 
             <motion.div variants={rise} className="mt-16 flex flex-col items-center gap-5 text-center">
               <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-                The physics engine is live today. Model training arrives in the lab next.
+                Both networks train in your browser. Open the lab, choose how much data they see,
+                and watch which prediction stays with the physics.
               </p>
-              <OpenLabButton />
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <OpenLabButton />
+                <Link
+                  href="/experiments"
+                  className="inline-flex h-12 items-center rounded-full px-5 text-[15px] font-medium text-white/70 transition-colors hover:text-white"
+                >
+                  See the experiments
+                </Link>
+              </div>
             </motion.div>
           </motion.div>
         </section>
@@ -305,7 +314,7 @@ const MODELS = [
     color: "var(--nn)",
     tint: "251 146 60",
     text: "A neural network that learns the motion from recorded data and nothing else.",
-    status: "Not trained yet",
+    status: "Trains in your browser",
   },
   {
     id: "pinn",
@@ -313,15 +322,27 @@ const MODELS = [
     color: "var(--pinn)",
     tint: "167 139 250",
     text: "The same network, with the equations of motion added to its loss.",
-    status: "Not trained yet",
+    status: "Trains in your browser",
   },
 ] as const;
 
 const EXPERIMENTS = [
-  { name: "Little data", text: "Train on only a few recorded moments of the motion." },
-  { name: "Noisy data", text: "Train on measurements with sensor noise added." },
-  { name: "Long horizon", text: "Predict far beyond the time span of the training data." },
-  { name: "New start", text: "Predict from a starting pose the model has never seen." },
+  {
+    name: "Standard conditions",
+    text: "Full data, tested on held-out trajectories from the same distribution.",
+  },
+  {
+    name: "Limited training data",
+    text: "Train on 5% and 10% of the base dataset.",
+  },
+  {
+    name: "Unseen initial conditions",
+    text: "Train on small angles, test on large angles.",
+  },
+  {
+    name: "Long-term prediction",
+    text: "Rollout error at 1 s, 3 s and 10 s.",
+  },
 ] as const;
 
 function ChapterHeading({

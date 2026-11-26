@@ -65,6 +65,35 @@ export class Trail {
   }
 }
 
+/** Ring buffer of (time, physics energy, NN energy, PINN energy). NaN means inactive. */
+export class ComparisonHistory {
+  static readonly STRIDE = 4;
+  readonly capacity: number;
+  readonly samples: Float32Array;
+  head = 0;
+  length = 0;
+
+  constructor(capacity: number) {
+    this.capacity = capacity;
+    this.samples = new Float32Array(capacity * ComparisonHistory.STRIDE);
+  }
+
+  push(time: number, physics: number, nn: number, pinn: number): void {
+    const offset = this.head * ComparisonHistory.STRIDE;
+    this.samples[offset] = time;
+    this.samples[offset + 1] = physics;
+    this.samples[offset + 2] = nn;
+    this.samples[offset + 3] = pinn;
+    this.head = (this.head + 1) % this.capacity;
+    if (this.length < this.capacity) this.length++;
+  }
+
+  clear(): void {
+    this.head = 0;
+    this.length = 0;
+  }
+}
+
 /** Ring buffer of (time, kinetic, potential, total) samples. */
 export class EnergyHistory {
   static readonly STRIDE = 4;
@@ -128,6 +157,9 @@ export class LabRuntime {
   readonly kinematics: Kinematics = createKinematics();
   readonly energy: Energy = { kinetic: 0, potential: 0, total: 0 };
   readonly history = new EnergyHistory(720);
+  /** Total energy of the three slots, sampled on the same clock as `history`. */
+  readonly comparison = new ComparisonHistory(720);
+  private readonly slotEnergy: Energy = { kinetic: 0, potential: 0, total: 0 };
   initialEnergy = 0;
   /** Largest |E - E0| seen since the last reset, joules. */
   maxEnergyError = 0;
@@ -180,6 +212,20 @@ export class LabRuntime {
     this.reset();
   }
 
+  /** Replaces several predicted trajectories, then restarts the clock once. */
+  setTrajectories(
+    next: Partial<Record<Exclude<SlotId, "physics">, Trajectory | null>>,
+  ): void {
+    for (const id of ["nn", "pinn"] as const) {
+      if (!(id in next)) continue;
+      const index = SLOTS.findIndex((slot) => slot.id === id);
+      const trajectory = next[id] ?? null;
+      this.trajectories[index] = trajectory;
+      this.active[index] = trajectory !== null && trajectory.states.length >= STATE_SIZE;
+    }
+    this.reset();
+  }
+
   setPlaying(playing: boolean): void {
     this.playing = playing;
   }
@@ -203,10 +249,12 @@ export class LabRuntime {
       if (slot !== PHYSICS_SLOT) this.sampleTrajectory(slot);
     }
     this.history.clear();
+    this.comparison.clear();
     this.refreshDerived();
     this.initialEnergy = this.energy.total;
     this.maxEnergyError = 0;
     this.history.push(0, this.energy);
+    this.recordComparison();
     this.epoch++;
   }
 
@@ -232,6 +280,7 @@ export class LabRuntime {
           const error = Math.abs(this.energy.total - this.initialEnergy);
           if (error > this.maxEnergyError) this.maxEnergyError = error;
           this.history.push(this.time, this.energy);
+          this.recordComparison();
         }
       }
       if (steps > 0) this.refreshDerived();
@@ -246,6 +295,14 @@ export class LabRuntime {
       const index = this.listeners.indexOf(listener);
       if (index >= 0) this.listeners.splice(index, 1);
     };
+  }
+
+  private recordComparison(): void {
+    const nn = this.active[1] ? energy(this.states[1], this.params, this.slotEnergy).total : Number.NaN;
+    const pinn = this.active[2]
+      ? energy(this.states[2], this.params, this.slotEnergy).total
+      : Number.NaN;
+    this.comparison.push(this.time, this.energy.total, nn, pinn);
   }
 
   private refreshDerived(): void {

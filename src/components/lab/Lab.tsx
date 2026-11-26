@@ -11,8 +11,12 @@ import { SpotlightCard } from "@/components/site/SpotlightCard";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { SystemSelector } from "@/components/systems/SystemSelector";
 import { ControlPanel, ParamSlider } from "./ControlPanel";
+import { ModelPanel } from "./ModelPanel";
 import { PhysicsPanel } from "./PhysicsPanel";
+import { TrainPanel } from "./TrainPanel";
+import { useLabModels } from "./useLabModels";
 
 const DEFAULT_THETA1 = 120;
 const DEFAULT_THETA2 = -20;
@@ -46,6 +50,7 @@ export function Lab() {
   );
   useEffect(() => runtime.setPlaying(playing), [runtime, playing]);
   useEffect(() => runtime.setSpeed(speed), [runtime, speed]);
+  const models = useLabModels(runtime, { theta1, theta2, params });
 
   const setAngles = useCallback((next1: number, next2: number) => {
     setTheta1(next1);
@@ -57,8 +62,9 @@ export function Lab() {
   );
 
   return (
-    <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="grid min-w-0 grid-cols-1 content-start gap-4">
+    <main className="mx-auto grid w-full max-w-[1400px] flex-1 gap-4 px-4 pb-10 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
+        <SystemSelector className="mb-4" />
         <motion.div {...entrance} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
           <SpotlightCard className="overflow-hidden">
             <div className="h-[480px] sm:h-[clamp(360px,46vh,560px)]">
@@ -152,28 +158,38 @@ export function Lab() {
             </div>
           </SpotlightCard>
         </motion.div>
-
-        <motion.div
-          {...entrance}
-          transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <PhysicsPanel runtime={runtime} />
-        </motion.div>
       </div>
 
-      <motion.aside
+      <motion.div
         {...entrance}
-        transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className="lg:sticky lg:top-4 lg:self-start"
+        transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+        className="order-3 min-w-0 lg:col-start-1"
       >
-        <ControlPanel
-          params={params}
-          theta1={theta1}
-          theta2={theta2}
-          onParamsChange={setParams}
-          onAnglesChange={setAngles}
-        />
-      </motion.aside>
+        <ModelPanel runtime={runtime} />
+      </motion.div>
+
+      <motion.div
+        {...entrance}
+        transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+        className="order-4 min-w-0 lg:col-start-1"
+      >
+        <PhysicsPanel runtime={runtime} />
+      </motion.div>
+
+      <div className="order-2 grid content-start gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:max-h-[calc(100svh-2rem)] lg:self-start lg:overflow-y-auto">
+        <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}>
+          <TrainPanel models={models} />
+        </motion.div>
+        <motion.div {...entrance} transition={{ duration: 0.7, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}>
+          <ControlPanel
+            params={params}
+            theta1={theta1}
+            theta2={theta2}
+            onParamsChange={setParams}
+            onAnglesChange={setAngles}
+          />
+        </motion.div>
+      </div>
     </main>
   );
 }

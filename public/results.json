@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-26T17:06:43.615Z",
+  "backend": "tensorflow",
+  "seed": 2026,
+  "dt": 0.02,
+  "hidden": [
+    64,
+    64,
+    64
+  ],
+  "optimizerSteps": 200,
+  "batchSize": 64,
+  "learningRate": 0.001,
+  "lambda": 0.4,
+  "rk4MsPerStep": 0.0019306150000011257,
+  "rows": [
+    {
+      "id": "E1",
+      "experiment": "E1",
+      "name": "Standard conditions",
+      "setting": "100% of the data, held-out trajectories",
+      "horizonSeconds": 2,
+      "trainPairs": 1200,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 5.343021289760152,
+        "mae": 1.4014492201338808,
+        "energyDrift": 0.350950521304078,
+        "msPerStep": 0.3299168500000064
+      },
+      "pinn": {
+        "mse": 3.305370598898095,
+        "mae": 1.1282849379354079,
+        "energyDrift": 0.6578991250110651,
+        "msPerStep": 0.32538960000000544
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E2-5",
+      "experiment": "E2",
+      "name": "Limited training data",
+      "setting": "5% of the data, same held-out trajectories",
+      "horizonSeconds": 2,
+      "trainPairs": 60,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 44.42926253942018,
+        "mae": 2.9259437653807305,
+        "energyDrift": 16.14459510683724,
+        "msPerStep": 0.29070017500002904
+      },
+      "pinn": {
+        "mse": 4.355509802548087,
+        "mae": 1.129248856066874,
+        "energyDrift": 1.2330874521026973,
+        "msPerStep": 0.31948110000003
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E2-10",
+      "experiment": "E2",
+      "name": "Limited training data",
+      "setting": "10% of the data, same held-out trajectories",
+      "horizonSeconds": 2,
+      "trainPairs": 120,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 11.490566077580828,
+        "mae": 1.8545260955792864,
+        "energyDrift": 1.0785490365807018,
+        "msPerStep": 0.286246624999967
+      },
+      "pinn": {
+        "mse": 5.880083276816231,
+        "mae": 1.4759177180163736,
+        "energyDrift": 0.4552950267665144,
+        "msPerStep": 0.3074014499999976
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E3",
+      "experiment": "E3",
+      "name": "Unseen initial conditions",
+      "setting": "trained on small angles, tested on large angles",
+      "horizonSeconds": 2,
+      "trainPairs": 1200,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 10.172980770557125,
+        "mae": 2.0790975050379554,
+        "energyDrift": 0.35477364518582866,
+        "msPerStep": 0.32801237499998026
+      },
+      "pinn": {
+        "mse": 2.7997262068026987,
+        "mae": 1.20844254117721,
+        "energyDrift": 0.48070818027502105,
+        "msPerStep": 0.287517224999965
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E4-1",
+      "experiment": "E4",
+      "name": "Long-term prediction",
+      "setting": "full data, error over 1 s",
+      "horizonSeconds": 1,
+      "trainPairs": 1200,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 1.1763342510336408,
+        "mae": 0.6740851220260811,
+        "energyDrift": 0.3338335919149523,
+        "msPerStep": 0.3299168500000064
+      },
+      "pinn": {
+        "mse": 0.8686639044396284,
+        "mae": 0.5619316383149271,
+        "energyDrift": 0.38062901196901305,
+        "msPerStep": 0.32538960000000544
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E4-3",
+      "experiment": "E4",
+      "name": "Long-term prediction",
+      "setting": "full data, error over 3 s",
+      "horizonSeconds": 3,
+      "trainPairs": 1200,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 11.849938187128037,
+        "mae": 1.8322902433132944,
+        "energyDrift": 0.6482909536041482,
+        "msPerStep": 0.3299168500000064
+      },
+      "pinn": {
+        "mse": 5.3052846257941075,
+        "mae": 1.395846695212493,
+        "energyDrift": 0.6097492807964136,
+        "msPerStep": 0.32538960000000544
+      },
+      "winner": "pinn"
+    },
+    {
+      "id": "E4-10",
+      "experiment": "E4",
+      "name": "Long-term prediction",
+      "setting": "full data, error over 10 s",
+      "horizonSeconds": 10,
+      "trainPairs": 1200,
+      "basePairs": 1200,
+      "testTrajectories": 4,
+      "nn": {
+        "mse": 39.133534337557464,
+        "mae": 3.200161291750822,
+        "energyDrift": 3.640432274073323,
+        "msPerStep": 0.3299168500000064
+      },
+      "pinn": {
+        "mse": 7.117690084364215,
+        "mae": 1.8125681956517394,
+        "energyDrift": 1.4410073253260345,
+        "msPerStep": 0.32538960000000544
+      },
+      "winner": "pinn"
+    }
+  ],
+  "takeaway": "On the full dataset PINN has the lower rollout MSE (3.305 against 5.343); with 5% of the data the PINN rollout MSE is 10.2× lower, and on large angles held out of training PINN wins. By 10 s both errors have grown (standard NN ×33, PINN ×8 from 1 s), which a chaotic pendulum is expected to do."
+}

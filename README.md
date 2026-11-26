@@ -9,9 +9,9 @@ The question: **does AI predict motion better when it learns the laws of physics
 | Step | Scope | State |
 | --- | --- | --- |
 | A | Scaffold, physics engine, scene, lab, landing | Done |
-| B | In-browser training of a Standard NN and a PINN (TensorFlow.js in a Web Worker) | Not started |
+| B | In-browser training of a Standard NN and a PINN (TensorFlow.js in a Web Worker) | Done |
 
-There is no ML code in the repository yet. The "Standard NN" and "PINN" slots in the scene show "Model not trained yet".
+`/lab` trains both models in a worker. `/experiments` shows the four comparisons. Precomputed numbers live in `public/results.json` and `RESULTS.md`; they are whatever `pnpm experiments` last wrote.
 
 ## Run it
 
@@ -27,8 +27,9 @@ pnpm dev          # http://localhost:3000
 | `pnpm build` | Production build (static, deployable to Vercel as is) |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Generates route types, then `tsc --noEmit` |
-| `pnpm test` | Vitest unit tests (physics engine, scene runtime) |
-| `pnpm test:e2e` | Playwright smoke test of `/` and `/lab`. First run: `pnpm exec playwright install chromium` |
+| `pnpm test` | Vitest unit tests (physics engine, scene runtime, dataset, physics residual) |
+| `pnpm test:e2e` | Playwright smoke test of `/`, `/lab` and `/experiments`. First run: `pnpm exec playwright install chromium` |
+| `pnpm experiments` | Train both models headlessly and rewrite `public/results.json` and `RESULTS.md` |
 
 Everything runs client-side. There is no backend, no API key and no `.env`.
 
@@ -36,7 +37,7 @@ Everything runs client-side. There is no backend, no API key and no `.env`.
 
 ```
 src/engine/            Physics, pure TypeScript, no React or DOM
-src/ml/                Placeholder for Step B
+src/ml/                Dataset, PINN residual, worker training, experiments
 src/components/scene/  Canvas renderers and the simulation runtime
 src/components/lab/    Controls and physics panel of /lab
 src/components/landing Landing page sections
